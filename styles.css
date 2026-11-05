@@ -1,0 +1,123 @@
+        :root {
+            --primary-900: #1e3a8a;
+            --primary-800: #1e40af;
+            --primary-700: #1d4ed8;
+            --primary-600: #2563eb;
+            --primary-100: #dbeafe;
+            --primary-50: #eff6ff;
+        }
+
+        body { font-family: 'Inter', 'Noto Sans Lao', sans-serif; }
+        .font-hero { font-family: 'Playfair Display', serif; }
+        .font-cursive { font-family: 'Dancing Script', cursive; }
+
+        /* Landing Page Styles */
+        body.view-landing {
+            background-image: url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center;
+            overflow-x: hidden;
+        }
+
+        .glass { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); }
+        .glass-hero { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 20px 40px 0 rgba(0, 0, 0, 0.1); border-radius: 2rem; padding: 3rem; display: inline-block; }
+        .feature-card { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 1.5rem; transition: all 0.4s ease; }
+        .feature-card:hover { transform: translateY(-5px) scale(1.03); background: rgba(255, 255, 255, 0.85); }
+        
+        .glow-blue:hover { box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.4); }
+        .glow-green:hover { box-shadow: 0 10px 40px -10px rgba(16, 185, 129, 0.4); }
+        .glow-purple:hover { box-shadow: 0 10px 40px -10px rgba(139, 92, 246, 0.4); }
+        .glow-orange:hover { box-shadow: 0 10px 40px -10px rgba(249, 115, 22, 0.4); }
+        .glow-rose:hover { box-shadow: 0 10px 40px -10px rgba(244, 63, 94, 0.4); }
+        .glow-indigo:hover { box-shadow: 0 10px 40px -10px rgba(99, 102, 241, 0.4); }
+
+        .glass-footer { background: linear-gradient(90deg, rgba(255,255,255,0.85) 0%, rgba(240,253,250,0.85) 100%); backdrop-filter: blur(10px); border-top: 1px solid rgba(255, 255, 255, 0.8); }
+        .hover-3d { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d; }
+        .hover-3d:hover { transform: translateY(-5px); }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .text-gradient-primary { background: linear-gradient(135deg, #1d4ed8 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        body.view-app { background-color: #f3f4f6; background-image: none; height: 100vh; overflow: hidden; }
+        body.theme-default { --primary-900: #1e3a8a; --primary-800: #1e40af; --primary-700: #1d4ed8; --primary-600: #2563eb; --primary-100: #dbeafe; --primary-50: #eff6ff; }
+        body.theme-emerald { --primary-900: #065f46; --primary-800: #047857; --primary-700: #059669; --primary-600: #10b981; --primary-100: #d1fae5; --primary-50: #ecfdf5; }
+        body.theme-rose { --primary-900: #9f1239; --primary-800: #be123c; --primary-700: #e11d48; --primary-600: #f43f5e; --primary-100: #ffe4e6; --primary-50: #fff1f2; }
+        body.theme-slate { --primary-900: #0f172a; --primary-800: #1e293b; --primary-700: #334155; --primary-600: #475569; --primary-100: #e2e8f0; --primary-50: #f8fafc; }
+        body.theme-violet { --primary-900: #4c1d95; --primary-800: #5b21b6; --primary-700: #7c3aed; --primary-600: #8b5cf6; --primary-100: #ede9fe; --primary-50: #f5f3ff; }
+        
+        .bg-blue-900 { background-color: var(--primary-900) !important; } .bg-blue-800 { background-color: var(--primary-800) !important; }
+        .bg-blue-700 { background-color: var(--primary-700) !important; } .bg-blue-600 { background-color: var(--primary-600) !important; }
+        .bg-blue-100 { background-color: var(--primary-100) !important; } .bg-blue-50 { background-color: var(--primary-50) !important; }
+        .text-blue-900 { color: var(--primary-900) !important; } .text-blue-800 { color: var(--primary-800) !important; }
+        .text-blue-700 { color: var(--primary-700) !important; } .text-blue-600 { color: var(--primary-600) !important; }
+        .border-blue-100 { border-color: var(--primary-100) !important; } .border-blue-200 { border-color: #bfdbfe !important; }
+
+        #employee-list::-webkit-scrollbar, #editor-content::-webkit-scrollbar, #dept-tree::-webkit-scrollbar { width: 6px; }
+        #employee-list::-webkit-scrollbar-thumb, #editor-content::-webkit-scrollbar-thumb, #dept-tree::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+
+        .field-highlight-1 input { background-color: #f0fdf4 !important; border-color: #22c55e !important; font-weight: 800 !important; color: #15803d !important; }
+        .field-highlight-2 input { background-color: #fff7ed !important; border-color: #f97316 !important; font-weight: 800 !important; color: #c2410c !important; }
+
+        #system-lock-overlay { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(25px); }
+
+        @media print {
+            @page { size: auto; margin: 0mm; } 
+            html, body { height: auto !important; overflow: visible !important; background: white !important; }
+            #landing-view, #welcome-modal, #system-lock-overlay, #global-archive-modal { display: none !important; }
+            body > *:not(#app-view) { display: none !important; }
+            #app-view { display: block !important; height: auto !important; overflow: visible !important; }
+            header, aside, #editor-content, #empty-state, .no-print, button, select, input:not([type="hidden"]), #bulk-action-management, .max-w-6xl > div:first-child { display: none !important; }
+            #app-content, #view-payroll, #payroll-workspace, #editor-area { display: block !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; position: static !important; overflow: visible !important; }
+            #preview-pane { display: block !important; position: relative !important; width: 100% !important; margin: 0 !important; padding: 15mm !important; border: none !important; box-shadow: none !important; background: white !important; visibility: visible !important; opacity: 1 !important; font-size: 12pt !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            #preview-pane * { visibility: visible !important; opacity: 1 !important; }
+            .bg-blue-900 { background-color: #1e3a8a !important; color: white !important; }
+            .bg-blue-50 { background-color: #eff6ff !important; } .bg-red-50 { background-color: #fef2f2 !important; }
+            .bg-green-100 { background-color: #dcfce7 !important; } .bg-yellow-50 { background-color: #fefce8 !important; }
+            .text-red-600 { color: #dc2626 !important; } .text-blue-900 { color: #1e3a8a !important; } .text-white { color: white !important; }
+            .print-info-container { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; margin-bottom: 20px !important; background-color: #eff6ff !important; padding: 15px !important; border-radius: 8px !important; border: 1px solid #dbeafe !important; }
+            #net-pay-block { color: white !important; }
+        }
+
+
+/* Targeted addition: movable payroll save control */
+#floating-save-button {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 210;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--primary-600, #2563eb);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 10px 25px rgba(0,0,0,.18);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+#floating-save-button:active { cursor: grabbing; }
+#floating-save-button.is-dirty { box-shadow: 0 0 0 3px rgba(245,158,11,.25), 0 10px 25px rgba(0,0,0,.18); }
+#floating-save-button.is-locked { opacity: .55; cursor: not-allowed; }
+#floating-save-button span, #floating-save-button i { pointer-events: none; }
+
+/* Targeted addition: visual lock for resigned payroll data */
+#editor-content.resigned-locked { position: relative; }
+#editor-content.resigned-locked::after {
+    content: "Earning data locked — staff is Resigned. Set Status to Active to modify.";
+    display: block;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}

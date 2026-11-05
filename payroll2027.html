@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neerada Payroll System v2026 (Unified)</title>
+    <link id="app-favicon" rel="icon" type="image/png" href="">
+    <link id="app-apple-touch-icon" rel="apple-touch-icon" href="">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@100..900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Noto+Sans+Lao:wght@100..900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS & Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+        <link rel="stylesheet" href="styles.css">
+
+</head>
+<body class="view-landing theme-default">
+
+    <!-- ================= LANDING PAGE SECTION ================= -->
+    <div id="landing-view" class="min-h-screen flex flex-col relative z-10">
+        <nav class="fixed w-full z-50 transition-all duration-300 p-4">
+            <div class="max-w-7xl mx-auto glass rounded-full px-6 py-3 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div id="landing-logo-container" class="bg-blue-900/10 p-2 rounded-full"><i data-lucide="hexagon" class="w-6 h-6 text-blue-900"></i></div>
+                    <img id="landing-custom-logo" src="" class="w-10 h-10 object-cover rounded-full hidden" />
+                    <span class="font-hero text-xl font-bold tracking-wide text-blue-900">Neerada</span>
+                </div>
+                <button onclick="window.launchApp()" class="bg-blue-900 hover:bg-blue-800 text-white px-5 py-2 rounded-full text-sm font-semibold transition-transform hover:scale-105 shadow-lg">Launch System</button>
+            </div>
+        </nav>
+
+        <section class="relative pt-32 pb-16 lg:pt-48 lg:pb-24 px-6 text-center">
+            <div class="max-w-5xl mx-auto">
+                <div class="glass-hero mb-10">
+                    <h1 class="font-hero text-5xl md:text-7xl lg:text-8xl font-black mb-4 leading-tight">
+                        <span class="text-slate-800">Neerada Payroll</span><br>
+                        <span class="text-gradient-primary italic">System</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 font-medium font-sans">Precision. Elegance. Efficiency.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <button onclick="window.launchApp()" class="group relative px-8 py-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-xl font-bold text-lg overflow-hidden shadow-2xl hover-3d flex items-center gap-3">
+                        <span>Enter Dashboard</span>
+                        <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                    <a href="#features" class="px-8 py-4 glass text-slate-900 rounded-xl font-bold text-lg hover:bg-white/90 transition-all shadow-md">Explore Features</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="py-16 px-6">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="feature-card p-6 glow-blue group cursor-default">
+                        <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors duration-500"><i data-lucide="globe" class="w-6 h-6 text-blue-600 group-hover:text-white transition-colors"></i></div>
+                        <h3 class="font-hero text-xl font-bold text-slate-800 mb-2">Multi-Currency</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Automated LAK & USD handling with real-time rate conversion.</p>
+                    </div>
+                    <div class="feature-card p-6 glow-green group cursor-default">
+                        <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-600 transition-colors duration-500"><i data-lucide="zap" class="w-6 h-6 text-green-600 group-hover:text-white transition-colors"></i></div>
+                        <h3 class="font-hero text-xl font-bold text-slate-800 mb-2">Instant Math</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Tax, social security, and overtime computed instantly.</p>
+                    </div>
+                    <div class="feature-card p-6 glow-purple group cursor-default">
+                        <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-600 transition-colors duration-500"><i data-lucide="file-check" class="w-6 h-6 text-purple-600 group-hover:text-white transition-colors"></i></div>
+                        <h3 class="font-hero text-xl font-bold text-slate-800 mb-2">Smart Payslips</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Bilingual, print-ready payslips tailored for distribution.</p>
+                    </div>
+                    <div class="feature-card p-6 glow-orange group cursor-default">
+                        <div class="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-600 transition-colors duration-500"><i data-lucide="credit-card" class="w-6 h-6 text-orange-600 group-hover:text-white transition-colors"></i></div>
+                        <h3 class="font-hero text-xl font-bold text-slate-800 mb-2">Loan Tracker</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Integrated tracking for active balances and history.</p>
+                    </div>
+                    <div class="feature-card p-6 glow-rose group cursor-default">
+                        <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-rose-600 transition-colors duration-500"><i data-lucide="shield-check" class="w-6 h-6 text-rose-600 group-hover:text-white transition-colors"></i></div>
+                        <h3 class="font-hero text-xl font-bold text-slate-800 mb-2">Local Security</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Offline-capable browser storage keeps data private.</p>
+                    </div>
+                    <div class="feature-card p-6 glow-indigo group cursor-default">
+                        <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-indigo-600 transition-colors duration-500"><i data-lucide="layout-grid" class="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors"></i></div>
+                        <h3 class="font-hero text-xl font-bold text-slate-800 mb-2">Flexible Structures</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Custom rules for Academic, GS, and English departments.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-16 px-6 bg-slate-900/5 backdrop-blur-sm">
+            <div class="max-w-6xl mx-auto glass rounded-2xl p-8 lg:p-12">
+                <div class="flex flex-col md:flex-row items-center gap-12">
+                    <div class="w-full md:w-1/2">
+                        <img src="https://images.unsplash.com/photo-1554224154-26032ffc0d07?ixlib=rb-1.2.1&auto=format&fit=crop&w=1352&q=80" alt="Financial Planning" class="rounded-xl shadow-2xl w-full h-64 object-cover transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                    </div>
+                    <div class="w-full md:w-1/2 text-center md:text-left">
+                        <i data-lucide="quote" class="w-12 h-12 text-blue-900/20 mb-4 inline-block"></i>
+                        <blockquote class="font-hero text-3xl text-slate-800 font-bold leading-relaxed mb-6">"Precision is not just an act, it is the soul of financial integrity."</blockquote>
+                        <p class="text-slate-600 font-medium">Streamlining operations for a brighter educational future.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="mt-auto glass-footer text-slate-600 py-6 px-6">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2"><span class="font-hero text-lg font-bold text-blue-900">Neerada Payroll</span></div>
+                <p class="text-xs font-medium">© 2026 Neerada School Payroll System. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- System Lock Overlay -->
+    <div id="system-lock-overlay" class="fixed inset-0 z-[200] hidden flex-col items-center justify-center text-white">
+        <div class="glass p-12 rounded-[3rem] text-center max-w-lg w-full mx-4 shadow-2xl">
+            <div class="mb-6 inline-flex p-5 bg-white/20 rounded-full animate-float"><i data-lucide="lock" class="w-10 h-10 text-white drop-shadow-md"></i></div>
+            <h1 class="text-4xl font-hero font-bold mb-6 text-white drop-shadow-lg tracking-wide">System Locked</h1>
+            <p id="lock-message" class="text-2xl text-white font-cursive mb-10 drop-shadow-md leading-relaxed"></p>
+            <button onclick="window.tryUnlock()" class="group bg-white text-blue-900 px-8 py-3 rounded-full font-bold shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-2 mx-auto">
+                <i data-lucide="key" class="w-4 h-4 text-blue-600"></i> Unlock System
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= APP VIEW SECTION ================= -->
+    <button id="floating-save-button" type="button" onclick="window.handleFloatingSave(event)" title="Save payroll data (Ctrl+S)" aria-label="Save payroll data">
+        <i data-lucide="save" class="w-4 h-4"></i><span>Save</span>
+    </button>
+
+    <div id="app-view" class="hidden flex flex-col h-full relative z-0">
+        
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="fixed inset-0 bg-blue-900 text-white flex items-center justify-center z-50 transition-opacity duration-500">
+            <div class="text-center animate-pulse">
+                <h1 class="text-2xl font-bold">Neerada Payroll</h1>
+                <p class="text-sm opacity-75 mt-2">Loading Unified System v2026...</p>
+            </div>
+        </div>
+
+        <!-- App Content -->
+        <div id="app-content" class="flex flex-col h-full hidden">
+            <!-- Header / Nav -->
+            <header class="bg-blue-900 text-white p-3 md:p-4 shadow-md flex justify-between items-center z-20 shrink-0">
+                <div class="flex items-center gap-4">
+                    <button id="mobile-back-btn" onclick="window.goBack()" class="lg:hidden p-1.5 bg-blue-800 rounded-full hover:bg-blue-700 hidden"><i data-lucide="chevron-left" class="w-5 h-5 text-white"></i></button>
+                    <img id="header-custom-logo" src="" class="w-8 h-8 object-cover rounded-full hidden md:block" />
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">Neerada Payroll</h1>
+                        <p class="text-[10px] text-blue-300 hidden md:block">Unified System v2026</p>
+                    </div>
+                    
+                    <div class="hidden md:flex bg-blue-800 rounded-lg p-1 ml-6">
+                        <button id="tab-dashboard" onclick="window.switchView('dashboard')" class="px-4 py-1.5 text-sm font-medium rounded-md bg-blue-800 text-white transition-colors">Dashboard</button>
+                        <button id="tab-payroll" onclick="window.switchView('payroll')" class="px-4 py-1.5 text-sm font-medium rounded-md text-blue-100 hover:bg-blue-800 transition-colors">Staff Manager</button>
+                        <button id="tab-config" onclick="window.switchView('config')" class="px-4 py-1.5 text-sm font-medium rounded-md text-blue-100 hover:bg-blue-800 transition-colors">Payslip Data</button>
+                        <button id="tab-ot-loans" onclick="window.switchView('ot-loans')" class="px-4 py-1.5 text-sm font-medium rounded-md text-blue-100 hover:bg-blue-800 transition-colors">OT & Loans</button>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button onclick="window.goToLanding()" class="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border border-white/10" title="Exit to Home"><i data-lucide="home" class="w-3.5 h-3.5"></i> <span class="hidden md:inline">Home</span></button>
+                    <button onclick="window.openSettings()" class="p-2 rounded-full hover:bg-blue-800 transition-colors" title="Settings"><i data-lucide="settings" class="w-5 h-5 text-blue-100"></i></button>
+                    <div class="md:hidden flex gap-2">
+                          <button onclick="window.switchView('dashboard')" class="text-xs bg-blue-800 px-2 py-1 rounded border border-blue-700 text-white">Dash</button>
+                          <button onclick="window.switchView('payroll')" class="text-xs bg-blue-800 px-2 py-1 rounded border border-blue-700 text-white">Staff</button>
+                          <button onclick="window.switchView('ot-loans')" class="text-xs bg-blue-800 px-2 py-1 rounded border border-blue-700 text-white">OT/Loans</button>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-800 rounded-lg text-xs font-medium border border-blue-700 hidden md:flex text-white"><i data-lucide="calendar" class="w-3 h-3"></i><span id="date-display">...</span></div>
+                </div>
+            </header>
+
+            <!-- DASHBOARD VIEW -->
+            <div id="view-dashboard" class="flex-1 overflow-y-auto p-4 lg:p-8">
+                <div class="max-w-6xl mx-auto space-y-8">
+                    <div class="flex flex-col md:flex-row justify-between items-end gap-4">
+                        <div><h2 class="text-2xl font-bold text-gray-800">Financial Overview</h2><p class="text-gray-500 text-sm">Combined Monthly Payroll Track</p></div>
+                        <div class="flex gap-2 items-center">
+                            <div class="flex bg-white rounded-md shadow-sm border border-gray-200">
+                                <select id="filter-year" onchange="window.updateDashboardStats()" class="bg-transparent text-sm font-medium text-gray-700 p-2 outline-none border-r border-gray-200"></select>
+                                <select id="filter-month" onchange="window.updateDashboardStats()" class="bg-transparent text-sm font-medium text-gray-700 p-2 outline-none">
+                                    <option value="All">All Months</option><option value="January">January</option><option value="February">February</option><option value="March">March</option><option value="April">April</option><option value="May">May</option><option value="June">June</option><option value="July">July</option><option value="August">August</option><option value="September">September</option><option value="October">October</option><option value="November">November</option><option value="December">December</option>
+                                </select>
+                            </div>
+                            <button onclick="window.downloadBankReport()" class="flex items-center justify-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600 transition text-sm font-medium"><i data-lucide="building" class="w-4 h-4"></i> For the Bank</button>
+                            <button onclick="window.downloadCSVReport()" class="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700 transition text-sm font-medium ml-2" title="Download CSV Report"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export CSV</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 md:col-span-2"><p class="text-xs font-bold text-gray-400 uppercase">Total Paid (LAK)</p><p id="stat-total-paid-lak" class="text-2xl font-mono font-bold text-blue-900 mt-2 whitespace-nowrap overflow-x-auto">₭ 0</p></div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 md:col-span-2"><p class="text-xs font-bold text-gray-400 uppercase">Total Paid (USD)</p><p id="stat-total-paid-usd" class="text-2xl font-mono font-bold text-green-700 mt-2 whitespace-nowrap overflow-x-auto">$0.00</p></div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 md:col-span-1"><p class="text-xs font-bold text-gray-400 uppercase">Staff Count</p><p id="stat-employees" class="text-3xl font-bold text-gray-800 mt-2">0</p></div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 md:col-span-1"><p class="text-xs font-bold text-gray-400 uppercase">Latest Record</p><div class="flex flex-col mt-2"><span id="stat-last-month" class="text-sm font-bold text-gray-800">No Data</span><span id="stat-last-amount" class="text-xs text-gray-500">---</span></div></div>
+                    </div>
+
+                    <div id="dept-breakdown" class="mt-8"></div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-8">
+                        <div class="p-4 border-b border-gray-100 bg-gray-50"><h3 class="font-bold text-gray-700">Payment History Logs</h3></div>
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 w-full text-gray-500 text-xs uppercase font-medium"><tr><th class="px-4 py-3">Period</th><th class="px-4 py-3">Staff</th><th class="px-4 py-3 text-right">Total LAK</th><th class="px-4 py-3 text-right">Total USD</th><th class="px-4 py-3 text-right">Actions</th></tr></thead>
+                            <tbody id="history-list" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONFIGURATION VIEW -->
+            <div id="view-config" class="flex-1 overflow-y-auto p-4 lg:p-8 hidden bg-gray-50">
+                <div class="max-w-4xl mx-auto">
+                    <!-- BULK IMPORT SECTION -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                        <div class="mb-4">
+                            <h2 class="text-lg font-bold text-gray-800">Bulk Payslip Data Import</h2>
+                            <p class="text-sm text-gray-500">Download a pre-filled template for a department, enter the monthly amounts, and upload to update payroll records. <span class="text-orange-600 font-bold">Note: Templates utilize Employee Name for matching. Please do not modify names in the CSV.</span></p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                <div class="flex items-center gap-2 mb-3 text-green-700 font-bold text-sm"><span class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-xs">1</span> Select Period</div>
+                                <div class="space-y-3">
+                                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Month</label><select id="bulk-import-month" class="w-full border rounded p-2 text-sm bg-white"></select></div>
+                                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Year</label><select id="bulk-import-year" class="w-full border rounded p-2 text-sm bg-white"></select></div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                <div class="flex items-center gap-2 mb-3 text-green-700 font-bold text-sm"><span class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-xs">2</span> Download Template</div>
+                                <div class="space-y-2">
+                                    <button onclick="window.downloadTemplate('Kindergarten')" class="w-full flex justify-between items-center px-3 py-2 bg-white border rounded text-sm text-gray-700 hover:bg-gray-50"><span>Kindergarten</span> <i data-lucide="download" class="w-4 h-4 text-gray-400"></i></button>
+                                    <button onclick="window.downloadTemplate('Primary')" class="w-full flex justify-between items-center px-3 py-2 bg-white border rounded text-sm text-gray-700 hover:bg-gray-50"><span>Primary</span> <i data-lucide="download" class="w-4 h-4 text-gray-400"></i></button>
+                                    <button onclick="window.downloadTemplate('Secondary')" class="w-full flex justify-between items-center px-3 py-2 bg-white border rounded text-sm text-gray-700 hover:bg-gray-50"><span>Secondary</span> <i data-lucide="download" class="w-4 h-4 text-gray-400"></i></button>
+                                    <div class="relative"><select id="download-other-dept" onchange="if(this.value) { window.downloadTemplate(this.value); this.value=''; }" class="w-full appearance-none px-3 py-2 bg-white border rounded text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"><option value="">Download Other Dept...</option></select><i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3 top-2.5 pointer-events-none"></i></div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                <div class="flex items-center gap-2 mb-3 text-green-700 font-bold text-sm"><span class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-xs">3</span> Upload Data</div>
+                                <div class="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                                    <button onclick="document.getElementById('bulk-payslip-csv').click()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold shadow flex items-center gap-2 text-sm"><i data-lucide="upload" class="w-4 h-4"></i> Bulk Upload CSV</button>
+                                    <input type="file" id="bulk-payslip-csv" accept=".csv" class="hidden" onchange="window.handleBulkCSVPayslipUpload(this)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden mb-8">
+                        <div class="p-6 border-b border-gray-200 flex justify-between items-center text-blue-900">
+                            <h2 class="text-xl font-bold flex items-center gap-3"><i data-lucide="file-spreadsheet" class="w-6 h-6 text-yellow-600"></i> Payroll Structure Management</h2>
+                            <button onclick="window.addNewDept()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-indigo-700 flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4"></i> New Dept</button>
+                        </div>
+                        <div class="p-6">
+                            <div class="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-end gap-2">
+                                <div class="flex-1"><label class="block text-xs font-bold text-blue-800 uppercase mb-2">Select Department to Edit</label><select id="config-dept-select" onchange="window.loadDeptConfig()" class="w-full p-2 border rounded bg-white text-sm"></select></div>
+                                <button onclick="window.renameDept()" class="bg-blue-50 text-blue-700 border border-blue-200 p-2 rounded hover:bg-blue-100 transition-colors" title="Rename Department"><i data-lucide="edit-3" class="w-5 h-5"></i></button>
+                                <button onclick="window.deleteDept()" class="bg-red-50 text-red-600 border border-red-200 p-2 rounded hover:bg-red-100 transition-colors" title="Delete Department"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                            </div>
+                            <div id="config-editor-area" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+                            <div class="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-100">
+                                <button onclick="window.saveDeptConfig()" class="bg-blue-600 text-white px-8 py-2.5 rounded hover:bg-blue-700 flex items-center gap-2 font-bold shadow-md transition-all"><i data-lucide="save" class="w-5 h-5"></i> Apply Changes Globally</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OT & LOANS VIEW -->
+            <div id="view-ot-loans" class="flex-1 overflow-y-auto p-1 hidden bg-gray-50">
+                <div class="w-full mx-auto">
+                    <div class="flex flex-col lg:flex-row gap-6 h-full">
+                        <div class="w-full lg:w-1/3 space-y-4 p-4">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h2 class="font-bold text-blue-900 mb-4 flex items-center gap-2"><i data-lucide="filter" class="w-4 h-4"></i> Selection</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Target Month</label>
+                                        <div class="flex gap-2">
+                                            <select id="otl-month" class="w-full p-2 border rounded text-sm bg-gray-50" onchange="window.refreshOTLoansView()"></select>
+                                            <select id="otl-year" class="w-1/3 p-2 border rounded text-sm bg-gray-50" onchange="window.refreshOTLoansView()"></select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Select Staff</label>
+                                        <input type="text" id="otl-search" placeholder="Search name..." class="w-full p-2 border rounded text-sm mb-2" onkeyup="window.filterOTLStaff()">
+                                        <div id="otl-staff-list" class="h-64 overflow-y-auto border rounded bg-white divide-y divide-gray-100"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full lg:w-2/3 space-y-6 p-4">
+                            <div id="otl-overview" class="space-y-6">
+                                <div class="flex justify-between items-center">
+                                    <h2 class="text-xl font-bold text-gray-800">Records & Reports</h2>
+                                    <span id="otl-report-period" class="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full"></span>
+                                </div>
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div class="p-4 border-b border-gray-100 bg-orange-50 flex justify-between items-center">
+                                        <h3 id="active-loans-header" class="font-bold text-orange-800 flex items-center gap-2"><i data-lucide="credit-card" class="w-4 h-4"></i> Active Loan Records</h3>
+                                        <div class="flex gap-2">
+                                            <button onclick="window.bulkCopyLoanPayments()" class="p-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-full transition-colors flex items-center gap-1 text-[10px] font-bold shadow-sm border border-blue-200"><i data-lucide="repeat" class="w-3.5 h-3.5"></i> Copy Prev Month</button>
+                                            <button onclick="window.openGlobalArchives()" class="p-1.5 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-full transition-colors flex items-center gap-1 text-[10px] font-bold shadow-sm border border-orange-200"><i data-lucide="folder-clock" class="w-3.5 h-3.5"></i> All Archives</button>
+                                        </div>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-sm text-left">
+                                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-4 py-3">Employee</th><th class="px-4 py-3">Loan Desc</th><th class="px-4 py-3 text-center">Date Loan</th><th class="px-4 py-3 text-center">Start Pay</th><th class="px-4 py-3 text-right">Total Loan</th><th class="px-4 py-3 text-right">Total Paid</th><th class="px-4 py-3 text-center"># Paid</th><th class="px-4 py-3 text-right">This Month</th><th class="px-4 py-3 text-right">Balance</th></tr></thead>
+                                            <tbody id="otl-report-loans" class="divide-y divide-gray-100"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div class="p-4 border-b border-gray-100 bg-blue-50"><h3 class="font-bold text-blue-800 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> Overtime Records (Selected Month)</h3></div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-sm text-left">
+                                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-4 py-3">Employee</th><th class="px-4 py-3">Department</th><th class="px-4 py-3 text-right">Hours</th><th class="px-4 py-3 text-right">Rate</th><th class="px-4 py-3 text-right">Total Amount</th></tr></thead>
+                                            <tbody id="otl-report-ot" class="divide-y divide-gray-100"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="ot-management-card" class="bg-white rounded-xl shadow-sm border border-gray-200 hidden">
+                                <div class="p-4 border-b border-gray-100 bg-blue-50 flex justify-between items-center">
+                                    <h3 class="font-bold text-blue-800 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> Overtime Management</h3>
+                                    <div class="flex items-center gap-2"><span id="otl-selected-name" class="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full"></span><button onclick="window.closeOTLEditor()" class="text-xs text-gray-500 hover:text-gray-700 underline">Close</button></div>
+                                </div>
+                                <div class="p-6">
+                                    <div id="ot-inputs-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                                    <div class="mt-4 flex justify-end"><button onclick="window.saveOTDetails()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-blue-700 flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Update OT in Payslip</button></div>
+                                </div>
+                            </div>
+
+                            <div id="loan-management-card" class="bg-white rounded-xl shadow-sm border border-gray-200 hidden">
+                                <div class="p-4 border-b border-gray-100 bg-orange-50 flex justify-between items-center">
+                                    <h3 class="font-bold text-orange-800 flex items-center gap-2"><i data-lucide="credit-card" class="w-4 h-4"></i> Loan Monitor</h3>
+                                    <button onclick="window.printLoanStatement()" class="text-xs flex items-center gap-1 bg-white border border-orange-200 text-orange-700 px-2 py-1 rounded hover:bg-orange-100"><i data-lucide="printer" class="w-3 h-3"></i> Print Statement</button>
+                                </div>
+                                <div class="p-6 space-y-6">
+                                    <div>
+                                        <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">Active Loans</h4>
+                                        <div class="overflow-x-auto border rounded-lg">
+                                            <table class="w-full text-sm text-left">
+                                                <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Type</th><th class="px-3 py-2 text-center">Date</th><th class="px-3 py-2 text-center">Start</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Paid</th><th class="px-3 py-2 text-center">#</th><th class="px-3 py-2 text-right">Balance</th><th class="px-3 py-2 text-center">Action</th></tr></thead>
+                                                <tbody id="otl-loans-list" class="divide-y divide-gray-100"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 relative">
+                                        <div class="flex justify-between items-center mb-3"><h4 id="loan-form-title" class="text-xs font-bold text-gray-700 uppercase">Add New Loan</h4><button id="btn-cancel-loan" onclick="window.cancelLoanEdit()" class="text-xs text-red-500 underline hidden">Cancel Edit</button></div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"><input id="new-loan-desc" type="text" placeholder="Loan Description (e.g. Car Loan)" class="border rounded p-2 text-sm"><input id="new-loan-amount" type="number" placeholder="Total Amount (LAK)" class="border rounded p-2 text-sm"></div>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                                            <div><label class="text-[10px] font-bold text-gray-500 uppercase">Date of Loan</label><input id="new-loan-date" type="date" class="w-full border rounded p-2 text-sm"></div>
+                                            <div><label class="text-[10px] font-bold text-gray-500 uppercase">Start Payment</label><input id="new-loan-start" type="date" class="w-full border rounded p-2 text-sm"></div>
+                                            <button id="btn-save-loan" onclick="window.saveLoanRecord()" class="bg-gray-800 text-white px-3 py-2 rounded text-sm font-bold hover:bg-gray-900 h-[38px]">Add Loan</button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                                        <h4 class="text-xs font-bold text-green-800 uppercase mb-3">Record Repayment for <span id="otl-repay-month"></span></h4>
+                                        <p class="text-xs text-gray-600 mb-3">This amount will be deducted from the payslip and applied to loan balances.</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Repayment Amount (LAK)</label>
+                                                <input id="loan-repay-amount" type="text" oninput="window.formatCurrencyInput(this)" class="w-full border rounded p-2 text-sm font-mono text-red-600" placeholder="0">
+                                            </div>
+                                            <button onclick="window.saveLoanPayment()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-green-700 flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> Apply Deduction</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="otl-empty-state" class="text-center py-12 text-gray-400 hidden"><i data-lucide="user-check" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><p>Select a staff member to manage OT & Loans.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAYROLL MANAGER VIEW -->
+            <div id="view-payroll" class="flex-1 overflow-hidden relative hidden">
+                <div class="flex h-full flex-col lg:flex-row">
+                    <aside class="hidden xl:flex w-64 bg-gray-50 border-r border-gray-200 flex-col z-10 h-full overflow-y-auto">
+                        <div class="p-4 border-b border-gray-100 bg-gray-100 sticky top-0"><h2 class="font-bold text-gray-700 text-xs uppercase tracking-wider">Departments</h2></div>
+                        <div id="dept-tree" class="p-2 space-y-1"></div>
+                    </aside>
+
+                    <aside id="sidebar" class="w-full lg:w-72 bg-white border-r border-gray-200 flex flex-col z-10 h-[35vh] lg:h-full">
+                        <div class="p-4 border-b border-gray-100 bg-white flex flex-col gap-3 shrink-0">
+                            <div class="flex justify-between items-center">
+                                <h2 class="font-semibold text-gray-700 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4"></i> Staff List</h2>
+                                <div class="flex gap-1">
+                                    <button onclick="window.exportDepartmentPayslipData()" title="PAYSLIP DATA" class="p-1 hover:bg-blue-100 rounded text-purple-600 transition-colors"><i data-lucide="table" class="w-4 h-4"></i></button>
+                                    <button onclick="window.downloadCSVTemplate()" title="Download CSV Template" class="p-1 hover:bg-blue-100 rounded text-green-600 transition-colors"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+                                    <button onclick="window.triggerImport()" title="Import Staff CSV" class="p-1 hover:bg-blue-100 rounded text-blue-600 transition-colors"><i data-lucide="upload" class="w-4 h-4"></i></button>
+                                    <button onclick="window.deleteAllPhotos()" title="Delete All Photos" class="p-1 hover:bg-red-100 rounded text-red-600 transition-colors"><i data-lucide="image-off" class="w-4 h-4"></i></button>
+                                    <button onclick="window.openStaffModal(null)" title="Add Staff" class="p-1 hover:bg-blue-100 rounded text-blue-600 transition-colors"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                                </div>
+                                <input type="file" id="staff-csv-input" accept=".csv" class="hidden" onchange="window.handleStaffCSV(this)">
+                            </div>
+                        </div>
+
+                        <div id="bulk-action-management" class="p-4 border-b border-gray-100 bg-white shadow-inner shrink-0">
+                            <h3 class="text-xs font-bold text-gray-600 mb-3 flex items-center gap-2 uppercase tracking-tight"><i data-lucide="database" class="w-3.5 h-3.5 text-indigo-600"></i> Filtered Data Actions</h3>
+                            <div class="text-[9px] text-gray-500 mb-3 uppercase font-semibold">Targets: <span id="current-filter-label" class="text-blue-800 font-bold">All Staff</span></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="window.bulkSavePayroll()" class="col-span-2 flex items-center justify-center gap-2 py-2 bg-indigo-600 text-white font-bold rounded shadow-sm hover:bg-indigo-700 transition text-xs"><i data-lucide="save-all" class="w-3.5 h-3.5"></i> Save All to History</button>
+                                <button onclick="window.bulkResetPayroll()" class="flex items-center justify-center gap-2 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 font-bold rounded shadow-sm hover:bg-yellow-100 transition text-[10px]"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset Data</button>
+                                <button id="delete-dept-button" onclick="window.deleteAllEmployeesInFilter()" class="flex items-center justify-center gap-2 py-2 bg-red-50 text-red-700 border border-red-200 font-bold rounded shadow-sm hover:bg-red-100 transition text-[10px]"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete All</button>
+                            </div>
+                        </div>
+
+                        <div id="filter-status" class="px-4 py-2 bg-blue-50 text-xs text-blue-800 border-b border-blue-100 hidden flex justify-between items-center">
+                            <span id="filter-label" class="font-medium truncate">All Staff</span>
+                            <button onclick="window.clearFilter()" class="text-blue-500 hover:text-blue-700"><i data-lucide="x" class="w-3 h-3"></i></button>
+                        </div>
+                        <div id="employee-list" class="flex-1 overflow-y-auto p-2"></div>
+                    </aside>
+
+                    <main id="payroll-workspace" class="flex-1 overflow-y-auto bg-gray-100 p-4 lg:p-6 block">
+                        <div id="empty-state" class="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
+                            <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center"><i data-lucide="briefcase" class="w-8 h-8 text-gray-400"></i></div>
+                            <p>Select an employee to view details.</p>
+                        </div>
+
+                        <div id="editor-area" class="w-full max-w-6xl mx-auto flex flex-col xl:flex-row gap-6 hidden">
+                            <div class="w-full xl:w-1/3 space-y-4 no-print flex flex-col h-full">
+                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 flex items-center justify-between">
+                                    <div class="text-xs font-bold text-blue-800 uppercase tracking-wide">Period</div>
+                                    <div class="flex gap-2">
+                                        <select id="editor-month" onchange="window.loadPeriodData()" class="text-xs border rounded p-1 bg-white outline-none"></select>
+                                        <select id="editor-year" onchange="window.loadPeriodData()" class="text-xs border rounded p-1 bg-white outline-none"></select>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4">
+                                    <div class="grid grid-cols-1 gap-2">
+                                        <button onclick="window.viewEmployeeHistory()" class="flex items-center justify-center gap-2 w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 text-sm font-medium mb-1"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> View History Dashboard</button>
+                                        <button onclick="window.editCurrentStaff()" class="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"><i data-lucide="user-cog" class="w-4 h-4"></i> Edit Staff Details</button>
+                                        <button onclick="window.loadPreviousMonthData()" class="flex items-center justify-center gap-2 w-full py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded hover:bg-orange-100 text-sm font-medium"><i data-lucide="copy" class="w-4 h-4"></i> Copy from Previous Month</button>
+                                        <button onclick="window.saveEmployeePayrollData()" class="flex items-center justify-center gap-2 w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium"><i data-lucide="save" class="w-4 h-4"></i> Save Month Data</button>
+                                        <button onclick="window.resetCurrentPayroll()" class="flex items-center justify-center gap-2 w-full py-2 bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 text-sm"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Data</button>
+                                        <div class="grid grid-cols-3 gap-2 mt-1">
+                                            <button onclick="window.downloadCurrentPayslipPDF()" title="Download PDF Payslip" class="flex items-center justify-center py-2 bg-gray-800 text-white rounded hover:bg-gray-900 text-sm"><i data-lucide="file-down" class="w-4 h-4"></i></button>
+                                            <button onclick="window.sendEmail()" title="Email Payslip" class="flex items-center justify-center py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"><i data-lucide="mail" class="w-4 h-4"></i></button>
+                                            <button onclick="window.sendWhatsApp()" title="WhatsApp" class="flex items-center justify-center py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"><i data-lucide="message-circle" class="w-4 h-4"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="editor-content" class="flex-1 overflow-y-auto"></div>
+                            </div>
+
+                            <div id="preview-pane" class="w-full xl:w-2/3 bg-white p-6 md:p-8 rounded shadow-lg border border-gray-200 text-xs md:text-sm">
+                                <div class="border-b-2 border-blue-900 pb-4 mb-4 flex justify-between items-start">
+                                    <div class="flex items-center gap-4">
+                                        <img id="prev-school-logo" class="h-16 w-auto hidden object-contain">
+                                        <div>
+                                            <h1 class="text-xl md:text-2xl font-bold text-blue-900 uppercase tracking-widest">Neerada School</h1>
+                                            <p class="text-gray-500 text-xs mt-1">Excellence in Education</p>
+                                            <div class="flex items-center gap-2 text-gray-400 text-[10px] mt-1"><i data-lucide="building" class="w-3 h-3"></i><span id="prev-campus">Campus</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col items-end">
+                                        <img id="prev-profile-pic" class="h-16 w-16 object-cover rounded-full border mb-2 hidden bg-gray-100">
+                                        <div class="text-right">
+                                            <h2 class="text-lg font-semibold text-gray-800">PAYSLIP</h2>
+                                            <p class="text-xs text-gray-600">Date: <span id="prev-date" class="font-bold"></span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3 mb-6 bg-blue-50 p-3 rounded-lg print-info-container">
+                                    <div><p class="text-[10px] text-gray-500 uppercase">Employee Name</p><p id="prev-name" class="text-gray-800 text-sm font-bold">---</p></div>
+                                    <div><p class="text-[10px] text-gray-500 uppercase">Position</p><p id="prev-pos" class="font-bold text-gray-800 text-sm">---</p></div>
+                                    <div><p class="text-[10px] text-gray-500 uppercase">Department</p><p id="prev-dept" class="font-bold text-gray-800 text-sm">---</p></div>
+                                    <div><p class="text-[10px] text-gray-500 uppercase">Employee ID</p><p id="prev-id" class="text-gray-800 font-mono text-sm">---</p></div>
+                                </div>
+                                <div id="preview-content"></div>
+                                <div id="print-footer" class="mt-8 text-center text-[10px] text-gray-400"><p>Computer-generated. No signature required.</p><p>© <span id="copyright-year"></span> Neerada School Payroll System</p></div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </div>
+
+        <!-- APP MODALS -->
+        <div id="add-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                <h2 id="modal-title" class="text-xl font-bold mb-4 text-blue-900">Staff Details</h2>
+                <form id="add-form" onsubmit="window.saveEmployee(event)" class="space-y-4">
+                    <input type="hidden" name="id" id="form-id">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-16 h-16 rounded-full bg-gray-100 border flex items-center justify-center overflow-hidden">
+                            <img id="form-preview-pic" class="w-full h-full object-cover hidden">
+                            <i data-lucide="user" id="form-default-icon" class="w-8 h-8 text-gray-400"></i>
+                        </div>
+                        <div class="flex-1 space-y-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Profile Photo</label>
+                            <input type="file" id="form-profile-pic" accept="image/*" onchange="window.handleProfileUpload(this)" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <button type="button" id="delete-modal-photo-btn" onclick="window.clearModalPhoto()" class="text-[10px] text-red-500 hover:text-red-700 underline font-medium mt-1 hidden">Remove Photo</button>
+                        </div>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label><input required name="name" id="form-name" type="text" class="w-full border rounded p-2 text-sm"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Campus</label>
+                            <select name="campus" id="form-campus" class="w-full border rounded p-2 text-sm bg-gray-50" onchange="window.filterModalDepts()"><option>Sibounheuang</option><option>Chommany</option><option>General Services</option></select>
+                        </div>
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label><select name="department" id="form-department" onchange="window.toggleBankFields()" class="w-full border rounded p-2 text-sm bg-white"></select></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Position</label><input required name="position" id="form-position" type="text" class="w-full border rounded p-2 text-sm"></div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Bank Account Name</label>
+                            <input name="bankAccountName" id="form-bank-name" oninput="window.checkBankName(this)" type="text" placeholder="e.g. MR SOULIVANH" class="w-full border rounded p-2 text-sm">
+                            <p id="bank-name-warning" class="text-[10px] text-red-500 font-bold mt-1 hidden">⚠️ Required for Bank Transfer</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">LAK Bank Account</label><input name="bankLak" id="form-bank-lak" type="text" class="w-full border rounded p-2 text-sm"></div>
+                        <div id="bank-usd-container" class="hidden"><label class="block text-xs font-bold text-gray-500 mb-1">USD Bank Account</label><input name="bankUsd" id="form-bank-usd" type="text" class="w-full border rounded p-2 text-sm"></div>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label><input name="email" id="form-email" type="email" class="w-full border rounded p-2 text-sm"></div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp</label><input name="whatsapp" id="form-whatsapp" type="text" class="w-full border rounded p-2 text-sm"></div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label><select name="status" id="form-status" class="w-full border rounded p-2 text-sm bg-white"><option value="Active">Active</option><option value="Resigned">Resigned</option></select></div>
+                    <div class="pt-4 flex gap-3"><button type="button" onclick="window.closeModal()" class="flex-1 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button><button type="submit" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">Save Staff</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="rate-calc-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[200] p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 class="text-lg font-bold text-blue-900 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5"></i> Rate Calculator</h2>
+                    <button onclick="document.getElementById('rate-calc-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                <div class="space-y-4 mb-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buying Rate</label><input type="number" id="calc-buy" class="w-full border rounded p-2 text-sm" placeholder="0" oninput="window.calculateRateAvg()"></div>
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Selling Rate</label><input type="number" id="calc-sell" class="w-full border rounded p-2 text-sm" placeholder="0" oninput="window.calculateRateAvg()"></div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded text-center border border-blue-100"><p class="text-xs text-blue-800 uppercase font-bold mb-1">Calculated Average</p><p id="calc-result" class="text-2xl font-mono font-bold text-blue-900">0</p></div>
+                    <button onclick="window.applyCalculatedRate()" class="w-full py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors shadow-md text-sm">Apply Rate to All English Staff</button>
+                </div>
+                <div class="border-t pt-4">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1"><i data-lucide="history" class="w-3 h-3"></i> Rate History (English Dept)</h3>
+                    <div id="calc-history-list" class="max-h-40 overflow-y-auto space-y-1 text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-100"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto relative">
+                <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-gray-800">Settings</h2><button onclick="window.closeSettings()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+                <div class="space-y-6">
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">App Theme</label><select id="theme-select" onchange="window.setTheme(this.value)" class="w-full border rounded p-2 text-sm bg-white"><option value="default">Default Blue</option><option value="emerald">Emerald Green</option><option value="rose">Rose Red</option><option value="slate">Slate Dark</option><option value="violet">Violet</option></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">School Logo</label><div class="flex items-center gap-2"><input type="file" accept="image/*" onchange="window.handleLogoUpload(this)" class="flex-1 min-w-0 text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"><button type="button" onclick="window.openGlobalNoteEditor()" title="Global Note for selected payslip month" class="shrink-0 p-2 border border-yellow-200 bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100"><i data-lucide="sticky-note" class="w-4 h-4"></i></button></div></div>
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <label class="block text-xs font-bold text-blue-800 uppercase mb-2">Bulk Payroll Tools</label>
+                        <div class="flex gap-2 mb-2"><select id="bulk-month" class="w-1/2 p-1 text-xs border rounded bg-white"></select><select id="bulk-year" class="w-1/2 p-1 text-xs border rounded bg-white"></select></div>
+                        <div class="space-y-2">
+                            <button onclick="window.bulkCopyPrevious()" class="w-full py-2 bg-orange-100 text-orange-700 border border-orange-200 rounded text-xs font-bold hover:bg-orange-200 flex items-center justify-center gap-2 transition-colors"><i data-lucide="copy" class="w-3 h-3"></i> Copy Previous Month (All)</button>
+                            <button onclick="window.bulkSaveMonthData()" class="w-full py-2 bg-green-100 text-green-700 border border-green-200 rounded text-xs font-bold hover:bg-green-200 flex items-center justify-center gap-2 transition-colors"><i data-lucide="save" class="w-3 h-3"></i> Save Month Data (All)</button>
+                            <button onclick="window.bulkEmailPayslips()" class="w-full py-2 bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs font-bold hover:bg-blue-200 flex items-center justify-center gap-2 transition-colors"><i data-lucide="mail" class="w-3 h-3"></i> Bulk Email Payslips</button>
+                            <select id="bulk-department" class="w-full p-1 text-xs border rounded bg-white"><option value="All">All Departments</option></select>
+                            <button onclick="window.bulkDownloadPayslipsPDF()" class="w-full py-2 bg-purple-100 text-purple-700 border border-purple-200 rounded text-xs font-bold hover:bg-purple-200 flex items-center justify-center gap-2 transition-colors"><i data-lucide="file-down" class="w-3 h-3"></i> Download Payslips (PDF)</button>
+                        </div>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">Data Management</label><div class="grid grid-cols-1 gap-2"><button onclick="window.exportData()" class="flex items-center justify-center gap-2 w-full py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 text-sm font-medium"><i data-lucide="download" class="w-4 h-4"></i> Export Backup</button><button onclick="document.getElementById('import-file').click()" class="flex items-center justify-center gap-2 w-full py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import Restore</button><input type="file" id="import-file" accept=".json" class="hidden" onchange="window.importData(this)"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="otl-history-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[150] p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-start shrink-0">
+                    <div><h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="clipboard-list" class="w-5 h-5 text-blue-600"></i><span id="otl-hist-name">Employee Record</span></h2><p class="text-sm text-gray-500">Loan & Overtime History</p></div>
+                    <div class="flex items-center gap-2"><button onclick="window.goToManageFromHistory()" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow hover:bg-blue-700 flex items-center gap-1"><span>Manage & Deduct</span> <i data-lucide="arrow-right" class="w-3 h-3"></i></button><button onclick="document.getElementById('otl-history-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button></div>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-6">
+                    <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Current Active Loans</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Description</th><th class="px-3 py-2 text-center">Added</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Paid</th><th class="px-3 py-2 text-right">Balance</th></tr></thead><tbody id="otl-hist-active-loans" class="divide-y divide-gray-100"></tbody></table></div></div>
+                    <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Archived Loans (Completed)</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Description</th><th class="px-3 py-2 text-center">Date Added</th><th class="px-3 py-2 text-right">Total</th></tr></thead><tbody id="otl-hist-archived-loans" class="divide-y divide-gray-100"></tbody></table></div></div>
+                    <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Loan Payment History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-green-50 text-green-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2 text-right">Payment Amount (LAK)</th><th class="px-3 py-2 text-center"></th></tr></thead><tbody id="otl-hist-payments" class="divide-y divide-gray-100"></tbody></table></div></div>
+                    <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Overtime History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-blue-50 text-blue-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2 text-right">Details</th><th class="px-3 py-2 text-right">Total OT Amount</th></tr></thead><tbody id="otl-hist-ot" class="divide-y divide-gray-100"></tbody></table></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="global-archive-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[150] p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-start shrink-0 bg-orange-50">
+                    <div><h2 class="text-xl font-bold text-orange-800 flex items-center gap-2"><i data-lucide="archive" class="w-5 h-5"></i> Global Archived Loans</h2><p class="text-sm text-orange-600">History of all completed loans across the organization</p></div>
+                    <button onclick="document.getElementById('global-archive-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-6 overflow-y-auto">
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 text-xs uppercase"><tr><th class="px-4 py-3">Employee</th><th class="px-4 py-3">Department</th><th class="px-4 py-3">Description</th><th class="px-4 py-3 text-center">Date Added</th><th class="px-4 py-3 text-right">Total Amount</th><th class="px-4 py-3 text-center">Status</th></tr></thead><tbody id="global-archive-list" class="divide-y divide-gray-100"></tbody></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="english-visa-history-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[120] p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-start shrink-0">
+                    <div><h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="file-clock" class="w-5 h-5 text-blue-600"></i><span id="visa-hist-emp-name">Visa History</span></h2><p class="text-sm text-gray-500">Visa payment records — latest first</p></div>
+                    <button onclick="window.closeEnglishVisaHistory()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-5 overflow-y-auto">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100"><p class="text-[10px] font-bold text-blue-800 uppercase">Visa Date</p><p id="visa-hist-visa-date" class="font-mono font-bold text-blue-900 mt-1">-</p></div>
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-100"><p class="text-[10px] font-bold text-gray-600 uppercase">Visa Cost</p><p id="visa-hist-cost" class="font-mono font-bold text-gray-900 mt-1">$0.00</p></div>
+                        <div class="bg-green-50 p-3 rounded-lg border border-green-100"><p class="text-[10px] font-bold text-green-800 uppercase">Total Payment</p><p id="visa-hist-total" class="font-mono font-bold text-green-900 mt-1">$0.00</p></div>
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-100"><p class="text-[10px] font-bold text-red-800 uppercase">Remaining</p><p id="visa-hist-remaining" class="font-mono font-bold text-red-900 mt-1">$0.00</p></div>
+                    </div>
+                    <div id="visa-hist-rows" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div id="employee-history-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-start shrink-0">
+                    <div><div class="flex items-center gap-3"><h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-5 h-5 text-blue-600"></i><span id="hist-emp-name">Employee History</span></h2><button id="hist-visa-history-button" onclick="window.openEnglishVisaHistory(selectedEmployee?.id)" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-xs font-bold" title="Visa History"><i data-lucide="file-clock" class="w-4 h-4"></i><span>Visa History</span></button></div><p id="hist-emp-dept" class="text-sm text-gray-500">Department</p></div>
+                    <button onclick="document.getElementById('employee-history-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100"><p class="text-xs font-bold text-blue-800 uppercase">Total Earned (LAK)</p><p id="hist-total-lak" class="text-2xl font-mono font-bold text-blue-900 mt-1">₭ 0</p></div>
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-100"><p class="text-xs font-bold text-green-800 uppercase">Total Earned (USD)</p><p id="hist-total-usd" class="text-2xl font-mono font-bold text-green-900 mt-1">$0.00</p></div>
+                    </div>
+                    <div id="hist-rows" class="overflow-y-auto max-h-[50vh] flex-1 space-y-2"></div>
+                    <div class="mt-4 pt-3 border-t border-gray-100"><h4 class="text-xs font-bold text-blue-800 mb-2">Staff Movement Notes</h4><div id="hist-movement-notes" class="space-y-2 max-h-40 overflow-y-auto"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="print-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[150] p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Print Settings</h2>
+                <div class="space-y-6">
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">Orientation</label><div class="flex gap-4"><label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="print-orient" value="portrait" checked class="text-blue-600"><span class="text-sm">Portrait</span></label><label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="print-orient" value="landscape" class="text-blue-600"><span class="text-sm">Landscape</span></label></div></div>
+                    <div><div class="flex justify-between items-center mb-2"><label class="block text-xs font-bold text-gray-500 uppercase">Page Scale</label><span id="scale-val" class="text-xs font-mono font-bold text-blue-600">100%</span></div><input type="range" id="print-scale" min="50" max="150" value="100" class="w-full accent-blue-600" oninput="document.getElementById('scale-val').innerText = this.value + '%'"></div>
+                    <div class="pt-2 flex gap-3"><button onclick="window.closePrintSettings()" class="flex-1 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button><button onclick="window.executePrint()" class="flex-1 py-2 bg-gray-800 text-white rounded hover:bg-gray-900 font-medium flex items-center justify-center gap-2"><i data-lucide="printer" class="w-4 h-4"></i> Print Now</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="save-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <h2 class="text-xl font-bold mb-4 text-blue-900">Save Payroll Run</h2>
+                <form onsubmit="window.savePayrollHistory(event)" class="space-y-4">
+                    <select id="save-month" class="w-full border rounded p-2 text-sm bg-white"></select>
+                    <input id="save-year" type="number" class="w-full border rounded p-2 text-sm" value="2026">
+                    <button type="submit" class="w-full py-2 bg-green-600 text-white rounded font-medium mt-4">Save & Close</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ================= LOGIC SECTION ================= -->
+    <script src="app.js"></script>
+</body>
+</html>

@@ -337,11 +337,16 @@
                                     <button onclick="window.printLoanStatement()" class="text-xs flex items-center gap-1 bg-white border border-orange-200 text-orange-700 px-2 py-1 rounded hover:bg-orange-100"><i data-lucide="printer" class="w-3 h-3"></i> Print Statement</button>
                                 </div>
                                 <div class="p-6 space-y-6">
+                                    <div class="flex gap-2 border-b border-gray-200 pb-2">
+                                        <button id="otl-tab-loans" type="button" onclick="window.switchLoanFeeTab('loans')" class="px-4 py-2 rounded-lg bg-orange-100 text-orange-800 text-xs font-bold">Loans</button>
+                                        <button id="otl-tab-fees" type="button" onclick="window.switchLoanFeeTab('fees')" class="px-4 py-2 rounded-lg text-gray-500 hover:bg-gray-100 text-xs font-bold">Fees</button>
+                                    </div>
+                                    <div id="otl-loans-panel">
                                     <div>
                                         <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">Active Loans</h4>
                                         <div class="overflow-x-auto border rounded-lg">
                                             <table class="w-full text-sm text-left">
-                                                <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Type</th><th class="px-3 py-2 text-center">Date</th><th class="px-3 py-2 text-center">Start</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Paid</th><th class="px-3 py-2 text-center">#</th><th class="px-3 py-2 text-right">Balance</th><th class="px-3 py-2 text-center">Action</th></tr></thead>
+                                                <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2 text-center">Deduct</th><th class="px-3 py-2">Type</th><th class="px-3 py-2 text-center">Date</th><th class="px-3 py-2 text-center">Start</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Paid</th><th class="px-3 py-2 text-center">#</th><th class="px-3 py-2 text-right">This Month</th><th class="px-3 py-2 text-right">Balance</th><th class="px-3 py-2 text-center">Action</th></tr></thead>
                                                 <tbody id="otl-loans-list" class="divide-y divide-gray-100"></tbody>
                                             </table>
                                         </div>
@@ -357,13 +362,40 @@
                                     </div>
                                     <div class="bg-green-50 p-4 rounded-lg border border-green-100">
                                         <h4 class="text-xs font-bold text-green-800 uppercase mb-3">Record Repayment for <span id="otl-repay-month"></span></h4>
-                                        <p class="text-xs text-gray-600 mb-3">This amount will be deducted from the payslip and applied to loan balances.</p>
+                                        <p class="text-xs text-gray-600 mb-3">Select which loans to deduct this month and enter the amount for each selected loan. The total repayment amount is calculated automatically.</p>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
                                             <div>
-                                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Repayment Amount (LAK)</label>
-                                                <input id="loan-repay-amount" type="text" oninput="window.formatCurrencyInput(this)" class="w-full border rounded p-2 text-sm font-mono text-red-600" placeholder="0">
+                                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Total Repayment (LAK)</label>
+                                                <input id="loan-repay-amount" type="text" oninput="window.updateLoanRepaymentAmount()" class="w-full border rounded p-2 text-sm font-mono font-bold text-red-600 bg-white" placeholder="0">
                                             </div>
                                             <button onclick="window.saveLoanPayment()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-green-700 flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> Apply Deduction</button>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    <div id="otl-fees-panel" class="hidden">
+                                        <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                            <div class="mb-3"><h4 class="text-xs font-bold text-gray-700 uppercase">Staff Fees</h4><p class="text-[10px] text-gray-500 mt-1">Monthly fees such as Room Rent or Study Fee. Select the fees to deduct for this month.</p></div>
+                                            <div class="overflow-x-auto border rounded-lg mb-4">
+                                                <table class="w-full text-sm text-left">
+                                                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2 text-center">Deduct</th><th class="px-3 py-2">Fee</th><th class="px-3 py-2 text-right">Monthly Fee</th><th class="px-3 py-2 text-center">This Month</th><th class="px-3 py-2 text-center">Action</th></tr></thead>
+                                                    <tbody id="otl-fees-list" class="divide-y divide-gray-100"></tbody>
+                                                </table>
+                                            </div>
+                                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Fee Description</label><input id="new-fee-desc" type="text" placeholder="e.g. Room Rent / Study Fee" class="w-full border rounded p-2 text-sm"></div>
+                                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Monthly Amount (LAK)</label><input id="new-fee-amount" type="number" min="0" placeholder="0" class="w-full border rounded p-2 text-sm"></div>
+                                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Start / Record Date</label><input id="new-fee-date" type="date" class="w-full border rounded p-2 text-sm"></div>
+                                                </div>
+                                                <div class="flex justify-between items-center mt-3 gap-3">
+                                                    <span id="fee-form-title" class="text-[10px] font-bold text-gray-600 uppercase">Add Fee</span>
+                                                    <div class="flex gap-2"><button id="btn-cancel-fee" type="button" onclick="window.cancelFeeEdit()" class="hidden text-xs text-red-500 underline">Cancel Edit</button><button type="button" onclick="window.saveFeeRecord()" class="bg-gray-800 text-white px-3 py-2 rounded text-sm font-bold hover:bg-gray-900">Save Fee</button></div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-4 bg-green-50 p-4 rounded-lg border border-green-100 flex justify-between items-center gap-3">
+                                                <div><label class="block text-[10px] font-bold text-gray-500 mb-1">Total Fees This Month (LAK)</label><input id="fee-repay-amount" type="text" readonly class="w-48 border rounded p-2 text-sm font-mono font-bold text-red-600 bg-white" placeholder="0"></div>
+                                                <button type="button" onclick="window.saveFeePayment()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-green-700 flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> Apply Fee Deduction</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -551,7 +583,7 @@
                 <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-gray-800">Settings</h2><button onclick="window.closeSettings()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button></div>
                 <div class="space-y-6">
                     <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">App Theme</label><select id="theme-select" onchange="window.setTheme(this.value)" class="w-full border rounded p-2 text-sm bg-white"><option value="default">Default Blue</option><option value="emerald">Emerald Green</option><option value="rose">Rose Red</option><option value="slate">Slate Dark</option><option value="violet">Violet</option></select></div>
-                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">School Logo</label><div class="flex items-center gap-2"><input type="file" accept="image/*" onchange="window.handleLogoUpload(this)" class="flex-1 min-w-0 text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"><button type="button" onclick="window.openGlobalNoteEditor()" title="Global Note for selected payslip month" class="shrink-0 p-2 border border-yellow-200 bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100"><i data-lucide="sticky-note" class="w-4 h-4"></i></button></div></div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">School Logo</label><div class="flex items-center gap-2"><input type="file" accept="image/*" onchange="window.handleLogoUpload(this)" class="flex-1 min-w-0 text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"><button type="button" onclick="window.openGlobalNoteEditor()" title="Global Note for selected payslip month" class="shrink-0 p-2 border border-yellow-200 bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100"><i data-lucide="sticky-note" class="w-4 h-4"></i></button><button type="button" onclick="window.openVisaSummary()" title="Visa Summary" class="shrink-0 p-2 border border-green-200 bg-green-50 text-green-700 rounded hover:bg-green-100"><i data-lucide="dollar-sign" class="w-4 h-4"></i></button></div></div>
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
                         <label class="block text-xs font-bold text-blue-800 uppercase mb-2">Bulk Payroll Tools</label>
                         <div class="flex gap-2 mb-2"><select id="bulk-month" class="w-1/2 p-1 text-xs border rounded bg-white"></select><select id="bulk-year" class="w-1/2 p-1 text-xs border rounded bg-white"></select></div>
@@ -578,6 +610,7 @@
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Current Active Loans</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Description</th><th class="px-3 py-2 text-center">Added</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Paid</th><th class="px-3 py-2 text-right">Balance</th></tr></thead><tbody id="otl-hist-active-loans" class="divide-y divide-gray-100"></tbody></table></div></div>
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Archived Loans (Completed)</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Description</th><th class="px-3 py-2 text-center">Date Added</th><th class="px-3 py-2 text-right">Total</th></tr></thead><tbody id="otl-hist-archived-loans" class="divide-y divide-gray-100"></tbody></table></div></div>
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Loan Payment History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-green-50 text-green-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2 text-right">Payment Amount (LAK)</th><th class="px-3 py-2 text-center"></th></tr></thead><tbody id="otl-hist-payments" class="divide-y divide-gray-100"></tbody></table></div></div>
+                    <div><h3 class="text-xs font-bold text-red-800 uppercase mb-2 border-b pb-1">Loan Payment Deletion Log</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-red-50 text-red-800 text-xs uppercase"><tr><th class="px-3 py-2">Month / Year</th><th class="px-3 py-2 text-right">Deleted Amount (LAK)</th><th class="px-3 py-2 text-right">Deleted Date & Time</th><th class="px-3 py-2">Action</th></tr></thead><tbody id="otl-hist-deletion-log" class="divide-y divide-gray-100"></tbody></table></div></div>
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Overtime History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-blue-50 text-blue-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2 text-right">Details</th><th class="px-3 py-2 text-right">Total OT Amount</th></tr></thead><tbody id="otl-hist-ot" class="divide-y divide-gray-100"></tbody></table></div></div>
                 </div>
             </div>
@@ -615,11 +648,44 @@
             </div>
         </div>
 
+        <div id="visa-summary-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[125] p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[82vh] flex flex-col">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-start shrink-0">
+                    <div><h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="dollar-sign" class="w-5 h-5 text-green-600"></i> Visa Summary</h2><p class="text-sm text-gray-500">All staff with visa costs, payments made, and remaining balance</p></div>
+                    <button onclick="window.closeVisaSummary()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-5 overflow-y-auto">
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-green-50 text-green-800 text-xs uppercase">
+                                <tr><th class="px-3 py-2">Staff Name</th><th class="px-3 py-2 text-right">Visa Cost</th><th class="px-3 py-2 text-right">Payment Made</th><th class="px-3 py-2 text-right">Remaining</th></tr>
+                            </thead>
+                            <tbody id="visa-summary-rows" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         
+        <div id="employee-loan-history-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[130] p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[82vh] flex flex-col">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-start shrink-0">
+                    <div><h2 id="employee-loan-history-name" class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="credit-card" class="w-5 h-5 text-orange-600"></i>Loan & Fee History</h2><p class="text-sm text-gray-500">Loan status, loan payments, and fee payments</p></div>
+                    <button onclick="window.closeEmployeeLoanHistory()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-5 overflow-y-auto space-y-6">
+                    <div><h3 class="text-xs font-bold text-orange-800 uppercase mb-2 border-b pb-1">Loan Records</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-orange-50 text-orange-800 text-xs uppercase"><tr><th class="px-3 py-2">Description</th><th class="px-3 py-2 text-center">Date Added</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Paid</th><th class="px-3 py-2 text-right">Balance</th><th class="px-3 py-2 text-center">Status</th></tr></thead><tbody id="employee-loan-history-loans" class="divide-y divide-gray-100"></tbody></table></div></div>
+                    <div><h3 class="text-xs font-bold text-green-800 uppercase mb-2 border-b pb-1">Loan Payment History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-green-50 text-green-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2 text-right">Payment Amount (LAK)</th></tr></thead><tbody id="employee-loan-history-payments" class="divide-y divide-gray-100"></tbody></table></div></div>
+                    <div><h3 class="text-xs font-bold text-purple-800 uppercase mb-2 border-b pb-1">Fee Payment History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-purple-50 text-purple-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2">Fee</th><th class="px-3 py-2 text-right">Payment Amount (LAK)</th></tr></thead><tbody id="employee-loan-history-fees" class="divide-y divide-gray-100"></tbody></table></div></div>
+                </div>
+            </div>
+        </div>
+
         <div id="employee-history-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] p-4">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-start shrink-0">
-                    <div><div class="flex items-center gap-3"><h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-5 h-5 text-blue-600"></i><span id="hist-emp-name">Employee History</span></h2><button id="hist-visa-history-button" onclick="window.openEnglishVisaHistory(selectedEmployee?.id)" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-xs font-bold" title="Visa History"><i data-lucide="file-clock" class="w-4 h-4"></i><span>Visa History</span></button></div><p id="hist-emp-dept" class="text-sm text-gray-500">Department</p></div>
+                    <div><div class="flex items-center gap-3"><h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-5 h-5 text-blue-600"></i><span id="hist-emp-name">Employee History</span></h2><button id="hist-loan-history-button" onclick="window.openEmployeeLoanHistory(selectedEmployee?.id)" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 text-xs font-bold" title="Loan History"><i data-lucide="credit-card" class="w-4 h-4"></i><span>Loan History</span></button><button id="hist-visa-history-button" onclick="window.openEnglishVisaHistory(selectedEmployee?.id)" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-xs font-bold" title="Visa History"><i data-lucide="file-clock" class="w-4 h-4"></i><span>Visa History</span></button></div><p id="hist-emp-dept" class="text-sm text-gray-500">Department</p></div>
                     <button onclick="document.getElementById('employee-history-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-6 h-6"></i></button>
                 </div>
                 <div class="p-6">

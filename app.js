@@ -208,10 +208,19 @@
             return { lak: Math.max(0, te - td), usd: 0 };
         }
 
+        function getLoanRecordKey(loan) {
+            if (!loan) return '';
+            if (loan.id) return String(loan.id);
+            return `${String(loan.description || '').trim()}|${loan.dateAdded || ''}|${loan.startDate || ''}|${parseFloat(loan.total || 0) || 0}`;
+        }
+
         window.syncLoanBalances = (emp) => {
             if(!emp || !Array.isArray(emp.activeLoans) || emp.activeLoans.length === 0) return;
+            const loansById = new Map();
             const loansByDesc = new Map();
             emp.activeLoans.forEach(loan => {
+                if (!loan.id) loan.id = `LN_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                loansById.set(String(loan.id), loan);
                 const desc = String(loan.description || '').trim();
                 if (desc && !loansByDesc.has(desc)) loansByDesc.set(desc, loan);
             });
@@ -219,6 +228,19 @@
             const paymentCounts = new Map();
             if (emp.payrollHistory) {
                 Object.values(emp.payrollHistory).forEach(ph => {
+                    let allocated = false;
+                    if (Array.isArray(ph.loanPayments) && ph.loanPayments.length > 0) {
+                        ph.loanPayments.forEach(item => {
+                            const amount = parseFloat(item.amount || 0) || 0;
+                            if (amount <= 0) return;
+                            const loan = (item.loanId && loansById.get(String(item.loanId))) || (item.description && loansByDesc.get(String(item.description).trim()));
+                            if (!loan) return;
+                            allocated = true;
+                            paidTotals.set(loan, (paidTotals.get(loan) || 0) + amount);
+                            paymentCounts.set(loan, (paymentCounts.get(loan) || 0) + 1);
+                        });
+                    }
+                    if (allocated) return;
                     const ded = parseFloat(ph.loanDeduction || 0) || 0;
                     if (ded <= 0) return;
                     const desc = String(ph.loanDesc || '').trim();
@@ -287,26 +309,40 @@
 
         function getPayslipLoanRecords(emp) {
             const sourceEmp = (selectedOTLStaff && selectedOTLStaff.id === emp?.id) ? selectedOTLStaff : (employees.find(e => e.id === emp?.id) || emp);
-            if (!sourceEmp || !Array.isArray(sourceEmp.activeLoans) || sourceEmp.activeLoans.length === 0) return [];
+            if (!sourceEmp) return [];
+            const key = `${editorYear}-${editorMonth}`;
+            const period = sourceEmp.payrollHistory && sourceEmp.payrollHistory[key] ? sourceEmp.payrollHistory[key] : null;
+            const currentPayments = {};
+            if (period && Array.isArray(period.loanPayments)) {
+                period.loanPayments.forEach(item => {
+                    if (item && item.loanId) currentPayments[String(item.loanId)] = parseFloat(item.amount || 0) || 0;
+                });
+            }
             if (typeof window.syncLoanBalances === 'function') window.syncLoanBalances(sourceEmp);
-            return sourceEmp.activeLoans.map(loan => {
+            const loans = [
+                ...(Array.isArray(sourceEmp.activeLoans) ? sourceEmp.activeLoans : []),
+                ...(Array.isArray(sourceEmp.archivedLoans) ? sourceEmp.archivedLoans : [])
+            ];
+            return loans.map(loan => {
                 const total = parseFloat(loan.total || 0) || 0;
                 const paid = Math.min(Math.max(parseFloat(loan.paid || 0) || 0, 0), total);
                 const remaining = Math.max(0, total - paid);
+                const currentPayment = Math.max(0, parseFloat(currentPayments[String(loan.id || '')] || 0) || 0);
                 return {
                     description: loan.description && String(loan.description).trim() ? String(loan.description).trim() : 'Loan',
                     dateAdded: loan.dateAdded || '-',
                     total,
                     paid,
-                    remaining
+                    remaining,
+                    currentPayment
                 };
-            }).filter(loan => loan.total > 0 && loan.remaining > 0);
+            }).filter(loan => loan.total > 0 && (loan.remaining > 0 || loan.currentPayment > 0));
         }
 
         function renderPayslipLoanSection(emp) {
             const loans = getPayslipLoanRecords(emp);
             if (!loans.length) return '';
-            const rows = loans.map(loan => `<div class="border-b border-orange-100 last:border-0 py-2"><div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-bold text-orange-900"><span>Loan / ເງິນກູ້: ${loan.description}</span><span>Loan Date / ວັນທີກູ້: ${loan.dateAdded}</span></div><div class="grid grid-cols-3 gap-3 mt-2 text-[10px]"><div><span class="block text-gray-500">Total Loan / ເງິນກູ້ທັງໝົດ</span><span class="font-mono font-bold text-gray-800">${formatMoney(loan.total)}</span></div><div><span class="block text-gray-500">Paid Already / ຈ່າຍແລ້ວ</span><span class="font-mono font-bold text-green-700">${formatMoney(loan.paid)}</span></div><div><span class="block text-gray-500">Remaining / ຍັງເຫຼືອ</span><span class="font-mono font-bold text-red-700">${formatMoney(loan.remaining)}</span></div></div></div>`).join('');
+            const rows = loans.map(loan => `<div class="border-b border-orange-100 last:border-0 py-2"><div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-bold text-orange-900"><span>Loan / ເງິນກູ້: ${loan.description}</span><span>Loan Date / ວັນທີກູ້: ${loan.dateAdded}</span></div><div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2 text-[10px]"><div><span class="block text-gray-500">Total Loan / ເງິນກູ້ທັງໝົດ</span><span class="font-mono font-bold text-gray-800">${formatMoney(loan.total)}</span></div><div><span class="block text-gray-500">Paid Already / ຈ່າຍແລ້ວ</span><span class="font-mono font-bold text-green-700">${formatMoney(loan.paid)}</span></div><div><span class="block text-gray-500">Remaining / ຍັງເຫຼືອ</span><span class="font-mono font-bold text-red-700">${formatMoney(loan.remaining)}</span></div></div></div>`).join('');
             return `<div class="mt-4 border border-orange-200 bg-orange-50 rounded-lg p-3 text-xs"><h4 class="font-bold text-orange-900 border-b border-orange-200 pb-1 mb-1 uppercase tracking-tight">Loan Details / ລາຍລະອຽດເງິນກູ້</h4>${rows}</div>`;
         }
 
@@ -316,37 +352,79 @@
             return loans.map(loan => `\n💳 *LOAN / ເງິນກູ້*\nLoan: ${loan.description}\nLoan Date / ວັນທີກູ້: ${loan.dateAdded}\nTotal Loan / ເງິນກູ້ທັງໝົດ: ${formatMoney(loan.total)}\nPaid Already / ຈ່າຍແລ້ວ: ${formatMoney(loan.paid)}\nRemaining / ຍັງເຫຼືອ: ${formatMoney(loan.remaining)}\n`).join('');
         }
 
-        function getGlobalPayslipNote(year = editorYear, month = editorMonth) {
+        function getGlobalPayslipNoteConfig(year = editorYear, month = editorMonth) {
             const key = `${year}-${month}`;
             try {
                 const notes = JSON.parse(localStorage.getItem('neerada_global_payslip_notes') || '{}');
-                return typeof notes[key] === 'string' ? notes[key] : '';
-            } catch (e) {
-                return '';
-            }
+                const raw = notes[key];
+                if (typeof raw === 'string') return { text: raw, campuses: ['Sibounheuang', 'Chommany'], departments: ['All'] };
+                if (raw && typeof raw === 'object' && typeof raw.text === 'string') {
+                    return {
+                        text: raw.text,
+                        campuses: Array.isArray(raw.campuses) && raw.campuses.length ? raw.campuses : ['Sibounheuang', 'Chommany'],
+                        departments: Array.isArray(raw.departments) && raw.departments.length ? raw.departments : ['All']
+                    };
+                }
+            } catch (e) {}
+            return { text: '', campuses: [], departments: [] };
+        }
+
+        function noteAppliesToEmployee(config, emp) {
+            if (!config || !config.text || !emp) return false;
+            if (emp.campus === 'General Services') return false;
+            const campuses = Array.isArray(config.campuses) ? config.campuses : [];
+            const departments = Array.isArray(config.departments) ? config.departments : [];
+            const campusMatch = campuses.includes(emp.campus);
+            const departmentMatch = departments.includes('All') || departments.includes(emp.department);
+            return campusMatch && departmentMatch;
+        }
+
+        function getGlobalPayslipNote(year = editorYear, month = editorMonth, emp = selectedEmployee) {
+            const config = getGlobalPayslipNoteConfig(year, month);
+            return noteAppliesToEmployee(config, emp) ? config.text : '';
         }
 
         function escapePayslipHTML(value) {
             return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
-        function getGlobalPayslipNoteHTML() {
-            const note = getGlobalPayslipNote();
+        function getGlobalPayslipNoteHTML(emp = selectedEmployee) {
+            const note = getGlobalPayslipNote(editorYear, editorMonth, emp);
             return note ? `<div class="mt-4 pt-2 border-t border-gray-300 text-[10px]"><p class="font-bold text-blue-900">Global Note:</p><p class="whitespace-pre-wrap text-gray-700">${escapePayslipHTML(note)}</p></div>` : '';
         }
 
-        function getGlobalPayslipNoteMessage() {
-            const note = getGlobalPayslipNote();
+        function getGlobalPayslipNoteMessage(emp = selectedEmployee) {
+            const note = getGlobalPayslipNote(editorYear, editorMonth, emp);
             return note ? `\n📝 *GLOBAL NOTE*\n${note}\n` : '';
         }
+
+        window.saveGlobalNote = () => {
+            const month = document.getElementById('editor-month')?.value || editorMonth;
+            const year = document.getElementById('editor-year')?.value || String(editorYear);
+            const key = `${year}-${month}`;
+            const text = (document.getElementById('global-note-editor-text')?.value || '').trim();
+            const campuses = Array.from(document.querySelectorAll('input[name="global-note-campus"]:checked')).map(el => el.value);
+            const departments = Array.from(document.getElementById('global-note-departments')?.selectedOptions || []).map(el => el.value);
+            if (text && !campuses.length) return alert('Please select at least one campus.');
+            if (text && !departments.length) return alert('Please select at least one department.');
+            let notes = {};
+            try { notes = JSON.parse(localStorage.getItem('neerada_global_payslip_notes') || '{}'); } catch (e) { notes = {}; }
+            if (text) notes[key] = { text, campuses, departments }; else delete notes[key];
+            localStorage.setItem('neerada_global_payslip_notes', JSON.stringify(notes));
+            document.getElementById('global-note-editor-overlay')?.remove();
+            if (typeof window.renderPreview === 'function') window.renderPreview();
+        };
 
         window.openGlobalNoteEditor = () => {
             const month = document.getElementById('editor-month')?.value || editorMonth;
             const year = document.getElementById('editor-year')?.value || String(editorYear);
             const key = `${year}-${month}`;
-            let notes = {};
-            try { notes = JSON.parse(localStorage.getItem('neerada_global_payslip_notes') || '{}'); } catch (e) { notes = {}; }
-            const existing = typeof notes[key] === 'string' ? notes[key] : '';
+            const config = getGlobalPayslipNoteConfig(year, month);
+            const existing = config.text || '';
+            const selectedCampuses = config.campuses.length ? config.campuses : ['Sibounheuang', 'Chommany'];
+            const selectedDepartments = config.departments.length ? config.departments : ['All'];
+            const departments = getOrderedDepartments();
+            const departmentOptions = ['All', ...departments.filter(d => !GS_DEPTS.includes(d))].filter((v, i, a) => a.indexOf(v) === i).map(d => `<option value="${escapePayslipHTML(d)}" ${selectedDepartments.includes(d) ? 'selected' : ''}>${escapePayslipHTML(d === 'All' ? 'All Departments' : d)}</option>`).join('');
 
             const overlay = document.createElement('div');
             overlay.id = 'global-note-editor-overlay';
@@ -356,14 +434,15 @@
                     <h3 class="font-bold text-blue-800">Global Note — ${escapePayslipHTML(month)} ${escapePayslipHTML(year)}</h3>
                     <button type="button" class="text-gray-400 hover:text-gray-700 p-1" title="Close" onclick="document.getElementById('global-note-editor-overlay')?.remove()"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
-                <textarea id="global-note-editor-text" class="w-full min-h-[320px] border border-gray-300 rounded-lg p-3 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="Type the note for all staff payslips...">${escapePayslipHTML(existing)}</textarea>
-                <p class="text-[11px] text-gray-500 mt-2">Press Enter to start a new line. Click OK to show this note on all staff payslips for this month.</p>
+                <textarea id="global-note-editor-text" class="w-full min-h-[220px] border border-gray-300 rounded-lg p-3 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="Type the note for selected staff payslips...">${escapePayslipHTML(existing)}</textarea>
+                <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div><p class="font-bold text-gray-700 mb-2">Campus</p><label class="flex items-center gap-2 mb-2"><input type="checkbox" name="global-note-campus" value="Sibounheuang" ${selectedCampuses.includes('Sibounheuang') ? 'checked' : ''}> Sibounheuang</label><label class="flex items-center gap-2"><input type="checkbox" name="global-note-campus" value="Chommany" ${selectedCampuses.includes('Chommany') ? 'checked' : ''}> Chommany</label><p class="text-[10px] text-gray-500 mt-2">General Services is excluded from Global Notes.</p></div>
+                    <div><p class="font-bold text-gray-700 mb-2">Department</p><select id="global-note-departments" multiple size="7" class="w-full border border-gray-300 rounded-lg p-2 bg-white">${departmentOptions}</select><p class="text-[10px] text-gray-500 mt-1">Use Ctrl/Cmd to select more than one department.</p></div>
+                </div>
+                <p class="text-[11px] text-gray-500 mt-3">The note will appear in the live payslip, downloaded PDF, email and WhatsApp only for the selected campus and department.</p>
                 <div class="flex justify-between gap-2 mt-4">
                     <button type="button" class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium ${existing ? '' : 'invisible'}" onclick="if(confirm('Delete the global note for ${escapePayslipHTML(month)} ${escapePayslipHTML(year)}? Previous months will not be affected.')) { const n = JSON.parse(localStorage.getItem('neerada_global_payslip_notes') || '{}'); delete n['${escapePayslipHTML(key)}']; localStorage.setItem('neerada_global_payslip_notes', JSON.stringify(n)); document.getElementById('global-note-editor-overlay')?.remove(); if (typeof window.renderPreview === 'function') window.renderPreview(); }">Delete Note</button>
-                    <div class="flex gap-2">
-                        <button type="button" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm" onclick="document.getElementById('global-note-editor-overlay')?.remove()">Cancel</button>
-                        <button type="button" class="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700" onclick="const v = document.getElementById('global-note-editor-text')?.value || ''; const n = JSON.parse(localStorage.getItem('neerada_global_payslip_notes') || '{}'); const t = v.trim(); if (t) n['${escapePayslipHTML(key)}'] = t; else delete n['${escapePayslipHTML(key)}']; localStorage.setItem('neerada_global_payslip_notes', JSON.stringify(n)); document.getElementById('global-note-editor-overlay')?.remove(); if (typeof window.renderPreview === 'function') window.renderPreview();">OK</button>
-                    </div>
+                    <div class="flex gap-2"><button type="button" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm" onclick="document.getElementById('global-note-editor-overlay')?.remove()">Cancel</button><button type="button" class="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700" onclick="window.saveGlobalNote()">Save Note</button></div>
                 </div>
             </div>`;
             document.body.appendChild(overlay);
@@ -564,11 +643,11 @@
 
         function renderEnglishPreview(container) { 
             const d = getArounyEnglishPayrollState(selectedEmployee, `${editorYear}-${editorMonth}`, currentPayrollState); const otPayment = (parseFloat(d.otHours)||0)*(parseFloat(d.otRate)||0); const earnSum = (parseFloat(d.basicPay)||0)+(parseFloat(d.accumulated)||0)+(parseFloat(d.increase)||0)+(parseFloat(d.earningsOthersUSD)||0); const grossUSD = earnSum + otPayment; const dedUSDSum = (parseFloat(d.profTax)||0)+(parseFloat(d.absences)||0)+(parseFloat(d.visa)||0)+(parseFloat(d.deductionsOthersUSD)||0); const netUSD = grossUSD - dedUSDSum; const convertible = netUSD - (parseFloat(d.cashOut)||0); const convertedLAK = convertible * (parseFloat(d.exchangeRate)||0); const extraLAK = (parseFloat(d.itLAK)||0)+(parseFloat(d.extraWorkOthersLAK)||0)+(parseFloat(d.stipendLAK)||0); const loanDed = parseFloat(d.loanDeduction)||0; const dedLAK = (parseFloat(d.insuranceLAK)||0)+(parseFloat(d.deductionsOthersLAK)||0) + loanDed; const finalLAK = convertedLAK + extraLAK - dedLAK; const fUSD = (n) => `$${parseFloat(n||0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; const fLAK = (n) => formatMoney(n); const renderRow = (l, v, isDed, c) => `<div class="flex justify-between py-1 border-b border-gray-100 last:border-0"><span class="${isDed ? 'text-red-700' : 'text-gray-600'}">${l}</span><span class="font-mono ${isDed ? 'text-red-600' : ''}">${c==='USD'?fUSD(v):fLAK(v)}</span></div>`; 
-            const loanDesc = d.loanDesc && d.loanDesc.trim() !== "" ? d.loanDesc : "Loan Repayment (LAK)"; const loanRow = loanDed > 0 ? renderRow(loanDesc, loanDed, true, 'LAK') : '';
+            const feeDed = parseFloat(d.feeDeduction) || 0; const loanOnly = Math.max(0, loanDed - feeDed); const loanDesc = d.loanDesc && d.loanDesc.trim() !== "" ? d.loanDesc.replace(/\s*\+?\s*Fees:\s*[^+]+$/i, '').trim() : "Loan Repayment (LAK)"; const loanRow = loanOnly > 0 ? renderRow(loanDesc || 'Loan Repayment (LAK)', loanOnly, true, 'LAK') : ''; const feeRow = feeDed > 0 ? renderRow('Fees (LAK)', feeDed, true, 'LAK') : '';
 
             const loanDetailsHTML = renderPayslipLoanSection(selectedEmployee);
             const visaDetailsHTML = renderEnglishVisaSection(selectedEmployee, d);
-            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs"><div><h4 class="font-bold text-blue-900 border-b-2 border-blue-100 mb-2 pb-1">EARNINGS</h4>${renderRow('Basic Pay ($)', d.basicPay, false, 'USD')}${renderRow('Accumulated ($)', d.accumulated, false, 'USD')}${renderRow(`${getEnglishIncreaseLabel()} Increased ($)`, d.increase, false, 'USD')}${renderRow('Others ($)', d.earningsOthersUSD, false, 'USD')}<h4 class="font-bold text-blue-900 border-b-2 border-blue-100 mt-4 mb-2 pb-1">OVERTIME (USD)</h4><div class="flex justify-between py-1 text-gray-500 italic"><span>Total no. of hours</span><span>${d.otHours}</span></div><div class="flex justify-between py-1 text-gray-500 italic"><span>Rate per hour</span><span>$${d.otRate}</span></div>${renderRow('Payment', otPayment, false, 'USD')}<h4 class="font-bold text-purple-900 border-b-2 border-purple-100 mt-4 mb-2 pb-1">EXTRA WORK (LAK)</h4>${renderRow('IT (LAK)', d.itLAK, false, 'LAK')}${renderRow('Others (LAK)', d.extraWorkOthersLAK, false, 'LAK')}${renderRow('STIPEND (4 levels)', d.stipendLAK, false, 'LAK')}<div class="bg-blue-50 p-2 rounded mt-4"><div class="flex justify-between font-bold text-blue-800"><span>Gross Pay ($)</span><span>${fUSD(grossUSD)}</span></div><div class="flex justify-between text-[10px] text-gray-500 mt-1"><span>Rate USD to LAK</span><span>${formatMoney(d.exchangeRate)}</span></div></div></div><div><h4 class="font-bold text-red-900 border-b-2 border-red-100 mb-2 pb-1">DEDUCTIONS</h4>${renderRow('Professional Tax ($)', d.profTax, true, 'USD')}${renderRow('Absences ($)', d.absences, true, 'USD')}${renderRow('Visa ($)', d.visa, true, 'USD')}${renderRow('Others ($)', d.deductionsOthersUSD, true, 'USD')}<div class="flex justify-between font-bold text-red-700 border-t border-red-200 mt-1 pt-1 mb-4"><span>TOTAL DEDUCTIONS ($)</span><span>(${fUSD(dedUSDSum)})</span></div>${renderRow('Insurance (LAK)', d.insuranceLAK, true, 'LAK')}${renderRow('Others (LAK)', d.deductionsOthersLAK, true, 'LAK')}${loanRow}<div class="flex justify-between font-bold text-red-700 border-t border-red-200 mt-1 pt-1"><span>Deductions (LAK)</span><span>(${fLAK(dedLAK)})</span></div></div></div>${loanDetailsHTML}${visaDetailsHTML}<div class="mt-6 border-t-2 border-gray-800 pt-4 text-xs"><div class="flex justify-between items-center mb-1"><span class="font-bold text-gray-700">Net Pay ($)</span><span class="font-mono font-bold">${fUSD(netUSD)}</span></div><div class="flex justify-between items-center mb-1 text-gray-500"><span>Cash out ${fUSD(d.cashOut)}</span><span>(${fUSD(d.cashOut)})</span></div><div class="flex justify-between items-center mb-1 text-gray-500"><span>$ convertible to LAK</span><span>${fUSD(convertible)}</span></div><div class="payslip-salary-box bg-blue-900 text-white p-4 rounded flex justify-between items-center mt-3 shadow-lg"><span class="font-bold uppercase tracking-wider text-lg text-white">Salary Pay (LAK)</span><span class="font-bold text-2xl font-mono text-white">${fLAK(finalLAK)}</span></div></div>${d.notes ? `<div class="mt-4 pt-2 border-t border-gray-300 text-[10px]"><p class="font-bold">Notes:</p><p class="whitespace-pre-wrap">${d.notes}</p></div>` : ''}${getGlobalPayslipNoteHTML()}`; 
+            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs"><div><h4 class="font-bold text-blue-900 border-b-2 border-blue-100 mb-2 pb-1">EARNINGS</h4>${renderRow('Basic Pay ($)', d.basicPay, false, 'USD')}${renderRow('Accumulated ($)', d.accumulated, false, 'USD')}${renderRow(`${getEnglishIncreaseLabel()} Increased ($)`, d.increase, false, 'USD')}${renderRow('Others ($)', d.earningsOthersUSD, false, 'USD')}<h4 class="font-bold text-blue-900 border-b-2 border-blue-100 mt-4 mb-2 pb-1">OVERTIME (USD)</h4><div class="flex justify-between py-1 text-gray-500 italic"><span>Total no. of hours</span><span>${d.otHours}</span></div><div class="flex justify-between py-1 text-gray-500 italic"><span>Rate per hour</span><span>$${d.otRate}</span></div>${renderRow('Payment', otPayment, false, 'USD')}<h4 class="font-bold text-purple-900 border-b-2 border-purple-100 mt-4 mb-2 pb-1">EXTRA WORK (LAK)</h4>${renderRow('IT (LAK)', d.itLAK, false, 'LAK')}${renderRow('Others (LAK)', d.extraWorkOthersLAK, false, 'LAK')}${renderRow('STIPEND (4 levels)', d.stipendLAK, false, 'LAK')}<div class="bg-blue-50 p-2 rounded mt-4"><div class="flex justify-between font-bold text-blue-800"><span>Gross Pay ($)</span><span>${fUSD(grossUSD)}</span></div><div class="flex justify-between text-[10px] text-gray-500 mt-1"><span>Rate USD to LAK</span><span>${formatMoney(d.exchangeRate)}</span></div></div></div><div><h4 class="font-bold text-red-900 border-b-2 border-red-100 mb-2 pb-1">DEDUCTIONS</h4>${renderRow('Professional Tax ($)', d.profTax, true, 'USD')}${renderRow('Absences ($)', d.absences, true, 'USD')}${renderRow('Visa ($)', d.visa, true, 'USD')}${renderRow('Others ($)', d.deductionsOthersUSD, true, 'USD')}<div class="flex justify-between font-bold text-red-700 border-t border-red-200 mt-1 pt-1 mb-4"><span>TOTAL DEDUCTIONS ($)</span><span>(${fUSD(dedUSDSum)})</span></div>${renderRow('Insurance (LAK)', d.insuranceLAK, true, 'LAK')}${renderRow('Others (LAK)', d.deductionsOthersLAK, true, 'LAK')}${loanRow}${feeRow}<div class="flex justify-between font-bold text-red-700 border-t border-red-200 mt-1 pt-1"><span>Deductions (LAK)</span><span>(${fLAK(dedLAK)})</span></div></div></div>${loanDetailsHTML}${visaDetailsHTML}<div class="mt-6 border-t-2 border-gray-800 pt-4 text-xs"><div class="flex justify-between items-center mb-1"><span class="font-bold text-gray-700">Net Pay ($)</span><span class="font-mono font-bold">${fUSD(netUSD)}</span></div><div class="flex justify-between items-center mb-1 text-gray-500"><span>Cash out ${fUSD(d.cashOut)}</span><span>(${fUSD(d.cashOut)})</span></div><div class="flex justify-between items-center mb-1 text-gray-500"><span>$ convertible to LAK</span><span>${fUSD(convertible)}</span></div><div class="payslip-salary-box bg-blue-900 text-white p-4 rounded flex justify-between items-center mt-3 shadow-lg"><span class="font-bold uppercase tracking-wider text-lg text-white">Salary Pay (LAK)</span><span class="font-bold text-2xl font-mono text-white">${fLAK(finalLAK)}</span></div></div>${d.notes ? `<div class="mt-4 pt-2 border-t border-gray-300 text-[10px]"><p class="font-bold">Notes:</p><p class="whitespace-pre-wrap">${d.notes}</p></div>` : ''}${getGlobalPayslipNoteHTML()}`; 
         }
 
         window.openEnglishVisaHistory = (employeeId) => {
@@ -599,12 +678,83 @@
             if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
         };
 
+        window.openVisaSummary = () => {
+            const modal = document.getElementById('visa-summary-modal');
+            const rows = document.getElementById('visa-summary-rows');
+            if (!modal || !rows) return;
+            const visaStaff = employees
+                .filter(emp => Math.max(0, parseFloat(emp.visaTotalCost || 0) || 0) > 0)
+                .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+            rows.innerHTML = visaStaff.length ? visaStaff.map(emp => {
+                const total = Math.max(0, parseFloat(emp.visaTotalCost || 0) || 0);
+                const records = emp.department === 'English' ? getEnglishVisaPaymentRecords(emp) : [];
+                const paid = Math.min(total, records.reduce((sum, record) => sum + record.amount, 0));
+                const remaining = Math.max(0, total - paid);
+                return `<tr><td class="px-3 py-2 font-bold text-gray-800">${escapePayslipHTML(emp.name || '-')}</td><td class="px-3 py-2 text-right font-mono">${formatUSD(total)}</td><td class="px-3 py-2 text-right font-mono text-green-700">${formatUSD(paid)}</td><td class="px-3 py-2 text-right font-mono text-red-700">${formatUSD(remaining)}</td></tr>`;
+            }).join('') : '<tr><td colspan="4" class="px-3 py-8 text-center text-gray-400">No staff with visa records.</td></tr>';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.closeVisaSummary = () => {
+            const modal = document.getElementById('visa-summary-modal');
+            if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        };
+
+        window.openEmployeeLoanHistory = (employeeId) => {
+            const emp = employees.find(e => String(e.id) === String(employeeId));
+            if (!emp) return;
+            const active = Array.isArray(emp.activeLoans) ? emp.activeLoans : [];
+            const archived = Array.isArray(emp.archivedLoans) ? emp.archivedLoans : [];
+            const history = emp.payrollHistory || {};
+            const loanRows = [];
+            Object.keys(history).sort((a,b) => {
+                const [yA,mA] = a.split('-'); const [yB,mB] = b.split('-');
+                if (yA !== yB) return parseInt(yB) - parseInt(yA);
+                return MONTHS.indexOf(mB) - MONTHS.indexOf(mA);
+            }).forEach(key => {
+                const amount = parseFloat(history[key]?.loanDeduction || 0) || 0;
+                if (amount > 0) loanRows.push({ key, amount });
+            });
+            const feeRows = [];
+            Object.keys(history).sort((a,b) => {
+                const [yA,mA] = a.split('-'); const [yB,mB] = b.split('-');
+                if (yA !== yB) return parseInt(yB) - parseInt(yA);
+                return MONTHS.indexOf(mB) - MONTHS.indexOf(mA);
+            }).forEach(key => {
+                const payments = Array.isArray(history[key]?.feePayments) ? history[key].feePayments : [];
+                payments.forEach(item => {
+                    const amount = parseFloat(item?.amount || 0) || 0;
+                    if (amount > 0) feeRows.push({ key, description: item.description || 'Fee', amount });
+                });
+            });
+            const loanBody = document.getElementById('employee-loan-history-loans');
+            const loanPaymentBody = document.getElementById('employee-loan-history-payments');
+            const feeBody = document.getElementById('employee-loan-history-fees');
+            const title = document.getElementById('employee-loan-history-name');
+            if (title) title.innerText = `${emp.name || 'Staff'} — Loan & Fee History`;
+            if (loanBody) loanBody.innerHTML = [...active, ...archived].length ? [...active.map(l => ({...l,status:'Active'})), ...archived.map(l => ({...l,status:'Completed'}))].map(l => `<tr class="border-b border-gray-50"><td class="px-3 py-2 text-xs font-medium">${escapePayslipHTML(l.description || 'Loan')}</td><td class="px-3 py-2 text-xs text-center">${escapePayslipHTML(l.dateAdded || '-')}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total || 0)}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.paid || 0)}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(Math.max((parseFloat(l.total || 0) || 0) - (parseFloat(l.paid || 0) || 0), 0))}</td><td class="px-3 py-2 text-center text-xs font-bold ${l.status === 'Active' ? 'text-blue-700' : 'text-green-700'}">${l.status}</td></tr>`).join('') : '<tr><td colspan="6" class="p-3 text-center text-gray-400 text-xs">No loan records.</td></tr>';
+            if (loanPaymentBody) loanPaymentBody.innerHTML = loanRows.length ? loanRows.map(r => `<tr class="border-b border-gray-50"><td class="px-3 py-2 text-xs font-medium">${escapePayslipHTML(r.key)}</td><td class="px-3 py-2 text-right font-mono font-bold text-green-700 text-xs">${formatMoney(r.amount)}</td></tr>`).join('') : '<tr><td colspan="2" class="p-3 text-center text-gray-400 text-xs">No loan payment records.</td></tr>';
+            if (feeBody) feeBody.innerHTML = feeRows.length ? feeRows.map(r => `<tr class="border-b border-gray-50"><td class="px-3 py-2 text-xs font-medium">${escapePayslipHTML(r.key)}</td><td class="px-3 py-2 text-xs">${escapePayslipHTML(r.description)}</td><td class="px-3 py-2 text-right font-mono font-bold text-green-700 text-xs">${formatMoney(r.amount)}</td></tr>`).join('') : '<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No fee payment records.</td></tr>';
+            const modal = document.getElementById('employee-loan-history-modal');
+            if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.closeEmployeeLoanHistory = () => {
+            const modal = document.getElementById('employee-loan-history-modal');
+            if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        };
+
         window.viewEmployeeHistory = () => { 
             if (!selectedEmployee) return; document.getElementById('hist-emp-name').innerText = selectedEmployee.name; document.getElementById('hist-emp-dept').innerText = selectedEmployee.department; const rows = document.getElementById('hist-rows'); const historyData = selectedEmployee.payrollHistory || {}; 
             const sortedKeys = Object.keys(historyData).sort((a,b) => { const [yA, mA] = a.split('-'); const [yB, mB] = b.split('-'); if (parseInt(yA) !== parseInt(yB)) return parseInt(yB) - parseInt(yA); return MONTHS.indexOf(mB) - MONTHS.indexOf(mA); });
             let totalHistoryLAK = 0; let totalHistoryUSD = 0; 
             if (sortedKeys.length === 0) { rows.innerHTML = '<p class="text-center text-gray-400 py-8">No history recorded for this staff member.</p>'; } else { rows.innerHTML = sortedKeys.map(key => { const total = calculatePayrollFromState(selectedEmployee, historyData[key]); totalHistoryLAK += total.lak; totalHistoryUSD += total.usd; return `<div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100"><div><p class="font-bold text-blue-900">${key}</p><p class="text-xs text-gray-500">Recorded Period</p></div><div class="text-right"><div class="flex flex-col items-end gap-0.5"><span class="font-mono font-bold text-green-700 text-sm">${formatMoney(total.lak)}</span><span class="font-mono font-bold text-blue-600 text-xs">${formatUSD(total.usd)}</span></div><button onclick="window.applyHistoryEntry('${key}')" class="text-[10px] text-gray-400 underline hover:text-blue-600 mt-1">Load to Editor</button></div></div>`; }).join(''); } 
             document.getElementById('hist-total-lak').innerText = formatMoney(totalHistoryLAK); document.getElementById('hist-total-usd').innerText = formatUSD(totalHistoryUSD);
+            const loanHistoryButton = document.getElementById('hist-loan-history-button');
+            if (loanHistoryButton) loanHistoryButton.onclick = () => window.openEmployeeLoanHistory(selectedEmployee.id);
             const visaHistoryButton = document.getElementById('hist-visa-history-button');
             if (visaHistoryButton) {
                 const isEnglish = selectedEmployee.department === 'English';
@@ -683,7 +833,7 @@
             await transact(STORE_EMPLOYEES, 'readwrite', (s) => s.put(selectedEmployee));
             employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); 
             window.updateDashboardStats(); renderEmployeeList();
-            alert(`Saved ${editorMonth} ${editorYear} Data Successfully!`);
+            const saveToast = document.createElement("div"); saveToast.className = "fixed top-5 right-5 z-[400] bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-bold"; saveToast.textContent = `Saved ${editorMonth} ${editorYear} Data Successfully!`; document.body.appendChild(saveToast); setTimeout(() => saveToast.remove(), 1800);
         };
 
         window.openPrintSettings = () => {
@@ -865,14 +1015,29 @@
         window.checkBankName = (input) => { const warning = document.getElementById('bank-name-warning'); if (input.value.trim() === "") { warning.classList.remove('hidden'); input.classList.add('border-red-500'); } else { warning.classList.add('hidden'); input.classList.remove('border-red-500'); } };
         window.saveEmployee = async (e) => { e.preventDefault(); const fd = new FormData(e.target); const data = Object.fromEntries(fd.entries()); const ex = employees.find(x => x.id === data.id); data.id = data.id || 'EMP_' + Date.now(); data.payrollHistory = ex ? (ex.payrollHistory || {}) : {}; data.profilePic = tempProfilePic; data.lastModified = new Date().toISOString(); if (ex && ex.activeLoans) data.activeLoans = ex.activeLoans; if(ex && ex.archivedLoans) data.archivedLoans = ex.archivedLoans; await transact(STORE_EMPLOYEES, 'readwrite', (s) => s.put(data)); employees = await transact(STORE_EMPLOYEES, 'readonly', (s) => s.getAll()); renderEmployeeList(); renderDeptSidebar(); window.closeModal(); window.updateDashboardStats(); if(selectedEmployee?.id === data.id) { selectedEmployee = data; renderPreview(); } };
         window.closeModal = () => document.getElementById('add-modal').classList.add('hidden');
-        window.saveLoanPayment = async () => { 
-            const m = document.getElementById('otl-month').value; const y = document.getElementById('otl-year').value; const key = `${y}-${m}`; const rawVal = document.getElementById('loan-repay-amount').value.replace(/,/g, ''); const newPayment = parseFloat(rawVal) || 0; 
+        window.saveLoanPayment = async () => {
+            const m = document.getElementById('otl-month').value; const y = document.getElementById('otl-year').value; const key = `${y}-${m}`;
             const freshStaff = await transact(STORE_EMPLOYEES, 'readonly', s => s.get(selectedOTLStaff.id));
             if(freshStaff) { selectedOTLStaff = freshStaff; if (!selectedOTLStaff.payrollHistory) selectedOTLStaff.payrollHistory = {}; if (!selectedOTLStaff.payrollHistory[key]) selectedOTLStaff.payrollHistory[key] = createInitialState(selectedOTLStaff.department); if (!selectedOTLStaff.activeLoans) selectedOTLStaff.activeLoans = []; }
-            const ph = selectedOTLStaff.payrollHistory[key]; ph.loanDeduction = newPayment; if (selectedOTLStaff.activeLoans.length > 0) ph.loanDesc = selectedOTLStaff.activeLoans[0].description;
-            window.syncLoanBalances(selectedOTLStaff); selectedOTLStaff.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff)); 
-            employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); alert("Loan Deduction applied. Payslip updated. Balances adjusted."); renderLoanTable(); if (selectedEmployee && selectedEmployee.id === selectedOTLStaff.id) loadPeriodData(); window.renderOTLOverview(); 
+            selectedOTLStaff.activeLoans.forEach((loan, idx) => { if (!loan.id) loan.id = `LN_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`; });
+            const loanPayments = [];
+            let newPayment = 0;
+            selectedOTLStaff.activeLoans.forEach((loan, idx) => {
+                const check = document.getElementById(`loan-select-${idx}`);
+                const input = document.getElementById(`loan-payment-${idx}`);
+                if (!check?.checked || !input) return;
+                const balance = Math.max(0, (parseFloat(loan.total) || 0) - (parseFloat(loan.paid) || 0));
+                const amount = Math.min(Math.max(parseFloat(String(input.value || '').replace(/,/g, '')) || 0, 0), balance);
+                if (amount > 0) { loanPayments.push({ loanId: String(loan.id), description: loan.description, amount }); newPayment += amount; }
+            });
+            const ph = selectedOTLStaff.payrollHistory[key];
+            ph.loanDeduction = newPayment;
+            ph.loanPayments = loanPayments;
+            ph.loanDesc = loanPayments.map(item => item.description).filter(Boolean).join(', ');
+            window.syncLoanBalances(selectedOTLStaff); selectedOTLStaff.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff));
+            employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); alert("Loan Deduction applied. Payslip updated. Balances adjusted."); renderLoanTable(); if (selectedEmployee && selectedEmployee.id === selectedOTLStaff.id) loadPeriodData(); window.renderOTLOverview();
         };
+
         window.toggleBankFields = () => { const dept = document.getElementById('form-department').value; const usdField = document.getElementById('bank-usd-container'); const visaDetails = document.getElementById('english-visa-details'); if (dept === 'English' || dept.includes('Accounts')) { usdField.classList.remove('hidden'); } else { usdField.classList.add('hidden'); } if (visaDetails) { visaDetails.classList.toggle('hidden', dept !== 'English'); if (dept === 'English') window.updateVisaRemainingDisplay(); } };
         window.updateVisaRemainingDisplay = () => { const total = Math.max(0, parseFloat(document.getElementById('form-visa-total')?.value || 0) || 0); const paid = Math.max(0, parseFloat(document.getElementById('form-visa-paid')?.value || 0) || 0); const remaining = Math.max(0, total - Math.min(total, paid)); const el = document.getElementById('form-visa-remaining'); if (el) el.innerText = formatUSD(remaining); };
         window.updateEnglishVisaDetails = async (field, value) => {
@@ -910,19 +1075,117 @@
         window.switchView = (v) => { localStorage.setItem('neerada_active_tab', v); ['dashboard', 'payroll', 'config', 'ot-loans'].forEach(i => { const el = document.getElementById('view-'+i); const tab = document.getElementById('tab-'+i); if(el) el.classList.add('hidden'); if(tab) tab.className = "px-4 py-1.5 text-sm font-medium rounded-md text-blue-100 hover:bg-blue-800 transition-colors"; }); const av = document.getElementById('view-'+v); const at = document.getElementById('tab-'+v); if(av) av.classList.remove('hidden'); if(at) at.className = "px-4 py-1.5 text-sm font-medium rounded-md bg-blue-800 text-white transition-colors"; if (v === 'config') window.loadDeptConfig(); if (v === 'dashboard') window.updateDashboardStats(); if (v === 'ot-loans') window.refreshOTLoansView(); };
         window.refreshOTLoansView = () => { const list = document.getElementById('otl-staff-list'); list.innerHTML = employees.map(emp => `<div onclick="window.selectOTLStaff('${emp.id}')" class="p-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 text-xs flex justify-between items-center ${selectedOTLStaff?.id === emp.id ? 'bg-blue-100' : ''}"><span class="font-bold text-gray-700">${emp.name}</span><span class="text-gray-400 text-[10px]">${emp.department}</span></div>`).join(''); window.renderOTLOverview(); if (selectedOTLStaff) window.selectOTLStaff(selectedOTLStaff.id); };
         window.renderOTLOverview = () => { const m = document.getElementById('otl-month').value; const y = document.getElementById('otl-year').value; const key = `${y}-${m}`; document.getElementById('otl-report-period').innerText = `${m} ${y}`; const loanTable = document.getElementById('otl-report-loans'); let loanRows = ''; let hasLoans = false; let activeLoanCount = 0; const sortedEmployees = [...employees].sort((a, b) => a.name.trim().localeCompare(b.name.trim())); sortedEmployees.forEach(emp => { window.syncLoanBalances(emp); if (emp.activeLoans && emp.activeLoans.length > 0) { let staffHasActive = false; let totalLoan = 0; let totalPaid = 0; let paymentThisMonth = (emp.payrollHistory && emp.payrollHistory[key]) ? (emp.payrollHistory[key].loanDeduction || 0) : 0; let payCount = 0; const descriptions = emp.activeLoans.map(l => { const bal = parseFloat(l.total) - parseFloat(l.paid || 0); if(bal > 0) { staffHasActive = true; totalLoan += parseFloat(l.total); totalPaid += parseFloat(l.paid || 0); payCount += (l.paymentCount || 0); return l.description; } return null; }).filter(Boolean).join(', '); const dates = emp.activeLoans.map(l => (parseFloat(l.total)-parseFloat(l.paid||0))>0 ? (l.dateAdded || '-') : null).filter(Boolean).join(', '); const starts = emp.activeLoans.map(l => (parseFloat(l.total)-parseFloat(l.paid||0))>0 ? (l.startDate || '-') : null).filter(Boolean).join(', '); let balance = totalLoan - totalPaid; if(staffHasActive) { hasLoans = true; activeLoanCount++; loanRows += `<tr class="hover:bg-gray-50 border-b border-gray-50"><td class="px-4 py-3 font-medium text-gray-800"><button onclick="window.showOTLHistory('${emp.id}')" class="hover:text-blue-600 hover:underline flex items-center gap-1">${emp.name} <i data-lucide="external-link" class="w-3 h-3 text-gray-400"></i></button></td><td class="px-4 py-3 text-gray-600 text-xs">${descriptions}</td><td class="px-4 py-3 text-center text-xs text-gray-500">${dates}</td><td class="px-4 py-3 text-center text-xs text-gray-500">${starts}</td><td class="px-4 py-3 text-right font-mono">${formatMoney(totalLoan)}</td><td class="px-4 py-3 text-right font-mono text-green-600">${formatMoney(totalPaid)}</td><td class="px-4 py-3 text-center font-bold text-gray-700">${payCount}</td><td class="px-4 py-3 text-right font-mono text-blue-600">${formatMoney(paymentThisMonth)}</td><td class="px-4 py-3 text-right font-mono font-bold text-red-600">${formatMoney(balance)}</td></tr>`; } } }); loanTable.innerHTML = hasLoans ? loanRows : `<tr><td colspan="9" class="p-4 text-center text-gray-400">No active loans found.</td></tr>`; document.getElementById('active-loans-header').innerHTML = `<i data-lucide="credit-card" class="w-4 h-4"></i> Active Loan Records (${activeLoanCount} Staff)`; const otTable = document.getElementById('otl-report-ot'); let otRows = ''; let hasOT = false; sortedEmployees.forEach(emp => { if (emp.payrollHistory && emp.payrollHistory[key]) { const pd = emp.payrollHistory[key]; const isEnglish = emp.department === 'English'; let otAmt = isEnglish ? ((parseFloat(pd.otHours)||0) * (parseFloat(pd.otRate)||0)) : (parseFloat(pd.overtimeAmount)||0); if (otAmt > 0) { hasOT = true; otRows += `<tr class="hover:bg-gray-50 border-b border-gray-50"><td class="px-4 py-3 font-medium text-gray-800"><button onclick="window.showOTLHistory('${emp.id}')" class="hover:text-blue-600 hover:underline flex items-center gap-1">${emp.name} <i data-lucide="external-link" class="w-3 h-3 text-gray-400"></i></button></td><td class="px-4 py-3 text-gray-500 text-xs">${emp.department}</td><td class="px-4 py-3 text-right font-mono">${isEnglish ? pd.otHours + ' hrs' : '-'}</td><td class="px-4 py-3 text-right font-mono">${isEnglish ? '$'+pd.otRate : '-'}</td><td class="px-4 py-3 text-right font-mono font-bold text-blue-700">${isEnglish ? formatUSD(otAmt) : formatMoney(otAmt)}</td></tr>`; } } }); otTable.innerHTML = hasOT ? otRows : `<tr><td colspan="5" class="p-4 text-center text-gray-400">No overtime records for ${m} ${y}.</td></tr>`; if (window.lucide) lucide.createIcons(); };
-        window.showOTLHistory = (id) => { const emp = employees.find(e => e.id === id); if (!emp) return; currentHistoryId = id; document.getElementById('otl-hist-name').innerText = emp.name; const activeBody = document.getElementById('otl-hist-active-loans'); if (emp.activeLoans && emp.activeLoans.length > 0) { activeBody.innerHTML = emp.activeLoans.map((l, idx) => `<tr><td class="px-3 py-2 text-gray-800 font-medium text-xs">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td><td class="px-3 py-2 text-right font-mono text-xs text-green-600">${formatMoney(l.paid || 0)}</td><td class="px-3 py-2 text-right font-mono text-xs font-bold text-red-600">${formatMoney(l.total - (l.paid || 0))}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.deleteLoanFromHistory(${idx}, 'active')" class="text-red-400 hover:text-red-600 p-1" title="Delete Loan"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`).join(''); } else { activeBody.innerHTML = `<tr><td colspan="6" class="p-3 text-center text-gray-400 text-xs">No active loans.</td></tr>`; } const archivedBody = document.getElementById('otl-hist-archived-loans'); if (emp.archivedLoans && emp.archivedLoans.length > 0) { archivedBody.innerHTML = emp.archivedLoans.map((l, idx) => `<tr><td class="px-3 py-2 font-medium text-xs">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.restoreArchivedLoan(${idx})" class="text-green-500 hover:text-green-700 p-1" title="Restore to Active"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button><button onclick="window.deleteLoanFromHistory(${idx}, 'archived')" class="text-red-400 hover:text-red-600 p-1" title="Delete Permanently"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`).join(''); } else { archivedBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-400 text-xs">No archived loans.</td></tr>`; } const histData = emp.payrollHistory || {}; const periods = Object.keys(histData).sort((a,b) => { const [yA, mA] = a.split('-'); const [yB, mB] = b.split('-'); if (yA !== yB) return parseInt(yB) - parseInt(yA); return MONTHS.indexOf(mB) - MONTHS.indexOf(mA); }); const loanHistBody = document.getElementById('otl-hist-payments'); let loanHistRows = ''; let hasLoanHist = false; let totalLoanPayments = 0; const otHistBody = document.getElementById('otl-hist-ot'); let otHistRows = ''; let hasOtHist = false; periods.forEach(key => { const data = histData[key]; const paid = parseFloat(data.loanDeduction || 0); if (paid > 0) { hasLoanHist = true; totalLoanPayments += paid; loanHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-right font-mono font-bold text-green-700 text-xs">${formatMoney(paid)}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.editHistoryPayment('${key}', ${paid})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit Payment"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="window.deleteHistoryPayment('${key}', ${paid})" class="text-red-400 hover:text-red-600 p-1" title="Delete Payment"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`; } const isEnglish = emp.department === 'English'; let otVal = 0; let details = ''; if (isEnglish) { const hrs = parseFloat(data.otHours || 0); const rate = parseFloat(data.otRate || 0); if (hrs > 0) { otVal = hrs * rate; details = `${hrs} hrs @ $${rate}`; } } else { otVal = parseFloat(data.overtimeAmount || 0); details = 'Flat Amount'; } if (otVal > 0) { hasOtHist = true; otHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-right text-xs text-gray-500">${details}</td><td class="px-3 py-2 text-right font-mono font-bold text-blue-700 text-xs">${isEnglish ? formatUSD(otVal) : formatMoney(otVal)}</td></tr>`; } }); if (hasLoanHist) { loanHistRows += `<tr class="border-t border-gray-200 bg-green-50"><td class="px-3 py-2 font-bold text-gray-800 text-xs text-right">TOTAL PAID</td><td class="px-3 py-2 text-right font-mono font-bold text-green-800 text-xs">${formatMoney(totalLoanPayments)}</td><td class="px-3 py-2"></td></tr>`; } loanHistBody.innerHTML = hasLoanHist ? loanHistRows : `<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No payment records found.</td></tr>`; otHistBody.innerHTML = hasOtHist ? otHistRows : `<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No overtime records found.</td></tr>`; document.getElementById('otl-history-modal').classList.remove('hidden'); if (window.lucide) lucide.createIcons(); };
+        window.showOTLHistory = (id) => { const emp = employees.find(e => e.id === id); if (!emp) return; currentHistoryId = id; document.getElementById('otl-hist-name').innerText = emp.name; const activeBody = document.getElementById('otl-hist-active-loans'); if (emp.activeLoans && emp.activeLoans.length > 0) { activeBody.innerHTML = emp.activeLoans.map((l, idx) => `<tr><td class="px-3 py-2 text-gray-800 font-medium text-xs">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td><td class="px-3 py-2 text-right font-mono text-xs text-green-600">${formatMoney(l.paid || 0)}</td><td class="px-3 py-2 text-right font-mono text-xs font-bold text-red-600">${formatMoney(l.total - (l.paid || 0))}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.deleteLoanFromHistory(${idx}, 'active')" class="text-red-400 hover:text-red-600 p-1" title="Delete Loan"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`).join(''); } else { activeBody.innerHTML = `<tr><td colspan="6" class="p-3 text-center text-gray-400 text-xs">No active loans.</td></tr>`; } const archivedBody = document.getElementById('otl-hist-archived-loans'); if (emp.archivedLoans && emp.archivedLoans.length > 0) { archivedBody.innerHTML = emp.archivedLoans.map((l, idx) => `<tr><td class="px-3 py-2 font-medium text-xs">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.restoreArchivedLoan(${idx})" class="text-green-500 hover:text-green-700 p-1" title="Restore to Active"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button><button onclick="window.deleteLoanFromHistory(${idx}, 'archived')" class="text-red-400 hover:text-red-600 p-1" title="Delete Permanently"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`).join(''); } else { archivedBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-400 text-xs">No archived loans.</td></tr>`; } const histData = emp.payrollHistory || {}; const periods = Object.keys(histData).sort((a,b) => { const [yA, mA] = a.split('-'); const [yB, mB] = b.split('-'); const yearDiff = parseInt(yB, 10) - parseInt(yA, 10); if (yearDiff !== 0) return yearDiff; return (parseInt(mB, 10) || (MONTHS.indexOf(mB) + 1)) - (parseInt(mA, 10) || (MONTHS.indexOf(mA) + 1)); }); const loanHistBody = document.getElementById('otl-hist-payments'); let loanHistRows = ''; let hasLoanHist = false; let totalLoanPayments = 0; const otHistBody = document.getElementById('otl-hist-ot'); let otHistRows = ''; let hasOtHist = false; periods.forEach(key => { const data = histData[key]; const paid = parseFloat(data.loanDeduction || 0); if (paid > 0) { hasLoanHist = true; totalLoanPayments += paid; loanHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-right font-mono font-bold text-green-700 text-xs">${formatMoney(paid)}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.editHistoryPayment('${key}', ${paid})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit Payment"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="window.deleteHistoryPayment('${key}', ${paid})" class="text-red-400 hover:text-red-600 p-1" title="Delete Payment"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`; } const isEnglish = emp.department === 'English'; let otVal = 0; let details = ''; if (isEnglish) { const hrs = parseFloat(data.otHours || 0); const rate = parseFloat(data.otRate || 0); if (hrs > 0) { otVal = hrs * rate; details = `${hrs} hrs @ $${rate}`; } } else { otVal = parseFloat(data.overtimeAmount || 0); details = 'Flat Amount'; } if (otVal > 0) { hasOtHist = true; otHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-right text-xs text-gray-500">${details}</td><td class="px-3 py-2 text-right font-mono font-bold text-blue-700 text-xs">${isEnglish ? formatUSD(otVal) : formatMoney(otVal)}</td></tr>`; } }); if (hasLoanHist) { loanHistRows += `<tr class="border-t border-gray-200 bg-green-50"><td class="px-3 py-2 font-bold text-gray-800 text-xs text-right">TOTAL PAID</td><td class="px-3 py-2 text-right font-mono font-bold text-green-800 text-xs">${formatMoney(totalLoanPayments)}</td><td class="px-3 py-2"></td></tr>`; } loanHistBody.innerHTML = hasLoanHist ? loanHistRows : `<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No payment records found.</td></tr>`; otHistBody.innerHTML = hasOtHist ? otHistRows : `<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No overtime records found.</td></tr>`; document.getElementById('otl-history-modal').classList.remove('hidden'); if (window.lucide) lucide.createIcons(); };
         window.deleteLoanFromHistory = async (idx, type) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp) return; if (!confirm(`Are you sure you want to delete this ${type} loan permanently?`)) return; if (type === 'active') { emp.activeLoans.splice(idx, 1); } else { emp.archivedLoans.splice(idx, 1); } emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); if(selectedOTLStaff && selectedOTLStaff.id === currentHistoryId) { selectedOTLStaff = emp; renderLoanTable(); window.renderOTLOverview(); } };
         window.restoreArchivedLoan = async (idx) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp) return; if(!confirm("Restore this loan to Active status?")) return; const loan = emp.archivedLoans[idx]; if(!emp.activeLoans) emp.activeLoans = []; emp.activeLoans.push(loan); emp.archivedLoans.splice(idx, 1); emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); };
         window.editHistoryPayment = async (key, oldVal) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp || !emp.payrollHistory[key]) return; const newValStr = prompt(`Edit Loan Payment for ${key}.\nCurrent Amount: ${oldVal}\nEnter new amount (LAK):`, oldVal); if(newValStr === null) return; const newVal = parseFloat(newValStr.replace(/,/g, '')) || 0; if(isNaN(newVal)) return alert("Invalid amount."); emp.payrollHistory[key].loanDeduction = newVal; window.syncLoanBalances(emp); emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); if(selectedOTLStaff && selectedOTLStaff.id === currentHistoryId) { selectedOTLStaff = emp; renderLoanTable(); window.renderOTLOverview(); } };
         window.deleteHistoryPayment = async (key, oldVal) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp || !emp.payrollHistory[key]) return; if(!confirm(`Delete payment record for ${key} of amount ${formatMoney(oldVal)}?`)) return; emp.payrollHistory[key].loanDeduction = 0; window.syncLoanBalances(emp); emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); if(selectedOTLStaff && selectedOTLStaff.id === currentHistoryId) { selectedOTLStaff = emp; renderLoanTable(); window.renderOTLOverview(); } };
         window.goToManageFromHistory = () => { if(currentHistoryId) { window.selectOTLStaff(currentHistoryId); document.getElementById('otl-history-modal').classList.add('hidden'); } };
         window.filterOTLStaff = () => { const q = document.getElementById('otl-search').value.toLowerCase(); const list = document.getElementById('otl-staff-list'); list.innerHTML = employees.filter(e => e.name.toLowerCase().includes(q)).map(emp => `<div onclick="window.selectOTLStaff('${emp.id}')" class="p-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 text-xs flex justify-between items-center ${selectedOTLStaff?.id === emp.id ? 'bg-blue-100' : ''}"><span class="font-bold text-gray-700">${emp.name}</span><span class="text-gray-400 text-[10px]">${emp.department}</span></div>`).join(''); };
-        window.selectOTLStaff = (id) => { editingLoanIndex = -1; document.getElementById('btn-cancel-loan').classList.add('hidden'); document.getElementById('loan-form-title').innerText = "Add New Loan"; document.getElementById('btn-save-loan').innerText = "Add Loan"; document.getElementById('new-loan-desc').value = ""; document.getElementById('new-loan-amount').value = ""; document.getElementById('new-loan-date').value = ""; document.getElementById('new-loan-start').value = ""; selectedOTLStaff = employees.find(e => e.id === id); document.getElementById('otl-overview').classList.add('hidden'); document.getElementById('otl-empty-state').classList.add('hidden'); document.getElementById('ot-management-card').classList.remove('hidden'); document.getElementById('loan-management-card').classList.remove('hidden'); document.getElementById('otl-selected-name').innerText = selectedOTLStaff.name; if (!selectedOTLStaff.activeLoans) selectedOTLStaff.activeLoans = []; if (selectedOTLStaff.activeLoans.length > 0) window.showOTLHistory(id); const m = document.getElementById('otl-month').value; const y = document.getElementById('otl-year').value; const key = `${y}-${m}`; if (!selectedOTLStaff.payrollHistory) selectedOTLStaff.payrollHistory = {}; if (!selectedOTLStaff.payrollHistory[key]) selectedOTLStaff.payrollHistory[key] = createInitialState(selectedOTLStaff.department); const payData = selectedOTLStaff.payrollHistory[key]; const otContainer = document.getElementById('ot-inputs-container'); if (selectedOTLStaff.department === 'English') { otContainer.innerHTML = `<div><label class="block text-xs font-bold text-gray-500 mb-1">OT Hours</label><input type="number" id="otl-hours" class="w-full border rounded p-2 text-sm" value="${payData.otHours || 0}"></div><div><label class="block text-xs font-bold text-gray-500 mb-1">OT Rate ($)</label><input type="number" id="otl-rate" class="w-full border rounded p-2 text-sm" value="${payData.otRate || 0}"></div>`; } else { otContainer.innerHTML = `<div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1">Total Overtime Amount (LAK)</label><input type="number" id="otl-amount" class="w-full border rounded p-2 text-sm font-bold text-blue-700 bg-blue-50" value="${payData.overtimeAmount || 0}"></div>`; } renderLoanTable(); document.getElementById('otl-repay-month').innerText = `${m} ${y}`; let currentDed = payData.loanDeduction || 0; let currentDedStr = currentDed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); document.getElementById('loan-repay-amount').value = currentDed > 0 ? currentDedStr : ""; };
+        window.selectOTLStaff = (id) => {
+            editingLoanIndex = -1;
+            document.getElementById('btn-cancel-loan').classList.add('hidden');
+            document.getElementById('loan-form-title').innerText = "Add New Loan";
+            document.getElementById('btn-save-loan').innerText = "Add Loan";
+            document.getElementById('new-loan-desc').value = "";
+            document.getElementById('new-loan-amount').value = "";
+            document.getElementById('new-loan-date').value = "";
+            document.getElementById('new-loan-start').value = "";
+            selectedOTLStaff = employees.find(e => e.id === id);
+            document.getElementById('otl-overview').classList.add('hidden');
+            document.getElementById('otl-empty-state').classList.add('hidden');
+            document.getElementById('ot-management-card').classList.remove('hidden');
+            document.getElementById('loan-management-card').classList.remove('hidden');
+            document.getElementById('otl-selected-name').innerText = selectedOTLStaff.name;
+            if (!selectedOTLStaff.activeLoans) selectedOTLStaff.activeLoans = [];
+            if (selectedOTLStaff.activeLoans.length > 0) window.showOTLHistory(id);
+            const m = document.getElementById('otl-month').value; const y = document.getElementById('otl-year').value; const key = `${y}-${m}`;
+            if (!selectedOTLStaff.payrollHistory) selectedOTLStaff.payrollHistory = {};
+            if (!selectedOTLStaff.payrollHistory[key]) selectedOTLStaff.payrollHistory[key] = createInitialState(selectedOTLStaff.department);
+            const payData = selectedOTLStaff.payrollHistory[key];
+            const otContainer = document.getElementById('ot-inputs-container');
+            if (selectedOTLStaff.department === 'English') {
+                otContainer.innerHTML = `<div><label class="block text-xs font-bold text-gray-500 mb-1">OT Hours</label><input type="number" id="otl-hours" class="w-full border rounded p-2 text-sm" value="${payData.otHours || 0}"></div><div><label class="block text-xs font-bold text-gray-500 mb-1">OT Rate ($)</label><input type="number" id="otl-rate" class="w-full border rounded p-2 text-sm" value="${payData.otRate || 0}"></div>`;
+            } else {
+                otContainer.innerHTML = `<div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1">Total Overtime Amount (LAK)</label><input type="number" id="otl-amount" class="w-full border rounded p-2 text-sm font-bold text-blue-700 bg-blue-50" value="${payData.overtimeAmount || 0}"></div>`;
+            }
+            renderLoanTable();
+            document.getElementById('otl-repay-month').innerText = `${m} ${y}`;
+            window.updateLoanSelectionTotal();
+        };
+
         window.closeOTLEditor = () => { selectedOTLStaff = null; document.getElementById('otl-overview').classList.remove('hidden'); document.getElementById('ot-management-card').classList.add('hidden'); document.getElementById('loan-management-card').classList.add('hidden'); document.getElementById('otl-empty-state').classList.add('hidden'); window.refreshOTLoansView(); };
-        function renderLoanTable() { const list = document.getElementById('otl-loans-list'); window.syncLoanBalances(selectedOTLStaff); if (selectedOTLStaff.activeLoans.length === 0) { list.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 text-xs">No active loans</td></tr>`; return; } list.innerHTML = selectedOTLStaff.activeLoans.map((l, idx) => { const bal = parseFloat(l.total) - parseFloat(l.paid || 0); const isPaidOff = bal <= 0; return `<tr class="hover:bg-gray-50 ${isPaidOff ? 'bg-green-50 opacity-75' : ''}"><td class="px-3 py-2 font-medium">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.startDate || '-'}</td><td class="px-3 py-2 text-right font-mono">${formatMoney(l.total)}</td><td class="px-3 py-2 text-right font-mono text-green-600">${formatMoney(l.paid || 0)}</td><td class="px-3 py-2 text-center font-bold text-gray-700">${l.paymentCount || 0}</td><td class="px-3 py-2 text-right font-mono font-bold ${isPaidOff ? 'text-green-600' : 'text-red-600'}">${formatMoney(bal)}</td><td class="px-3 py-2 text-center flex gap-1 justify-center">${isPaidOff ? `<button onclick="window.archiveLoan(${idx})" class="text-gray-500 hover:text-gray-800" title="Archive (Remove from Active)"><i data-lucide="folder-check" class="w-3.5 h-3.5"></i></button>` : `<button onclick="window.editLoan(${idx})" class="text-blue-400 hover:text-blue-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>`}<button onclick="window.removeLoan(${idx})" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td></tr>`; }).join(''); if(window.lucide) lucide.createIcons(); }
+        function getLoanPaymentAllocations(staff, key) {
+            const state = staff && staff.payrollHistory && staff.payrollHistory[key];
+            if (!state) return {};
+            const allocations = {};
+            if (Array.isArray(state.loanPayments)) {
+                state.loanPayments.forEach(item => {
+                    if (item && item.loanId) allocations[String(item.loanId)] = parseFloat(item.amount || 0) || 0;
+                });
+            }
+            if (!Object.keys(allocations).length && parseFloat(state.loanDeduction || 0) > 0 && staff.activeLoans && staff.activeLoans.length) {
+                const firstLoan = staff.activeLoans[0];
+                allocations[String(firstLoan.id || getLoanRecordKey(firstLoan))] = parseFloat(state.loanDeduction || 0) || 0;
+            }
+            return allocations;
+        }
+
+        window.toggleLoanSelection = (idx) => {
+            const check = document.getElementById(`loan-select-${idx}`);
+            const input = document.getElementById(`loan-payment-${idx}`);
+            if (!check || !input) return;
+            if (check.checked && (!parseFloat(input.value.replace(/,/g, '')) || 0) && selectedOTLStaff?.activeLoans?.[idx]) {
+                const loan = selectedOTLStaff.activeLoans[idx];
+                const balance = Math.max(0, (parseFloat(loan.total) || 0) - (parseFloat(loan.paid) || 0));
+                input.value = balance > 0 ? formatMoney(balance).replace(/,/g, ',') : '';
+            }
+            if (!check.checked) input.value = '';
+            window.updateLoanSelectionTotal();
+        };
+
+        window.updateLoanSelectionTotal = () => {
+            let total = 0;
+            if (selectedOTLStaff?.activeLoans) {
+                selectedOTLStaff.activeLoans.forEach((loan, idx) => {
+                    const check = document.getElementById(`loan-select-${idx}`);
+                    const input = document.getElementById(`loan-payment-${idx}`);
+                    if (check?.checked && input) {
+                        const balance = Math.max(0, (parseFloat(loan.total) || 0) - (parseFloat(loan.paid) || 0));
+                        const amount = Math.min(Math.max(parseFloat(String(input.value || '').replace(/,/g, '')) || 0, 0), balance);
+                        if (amount !== (parseFloat(String(input.value || '').replace(/,/g, '')) || 0)) input.value = amount ? formatMoney(amount) : '';
+                        total += amount;
+                    }
+                });
+            }
+            const totalEl = document.getElementById('loan-repay-amount');
+            if (totalEl) totalEl.value = total ? formatMoney(total) : '';
+        };
+
+        function renderLoanTable() {
+            const list = document.getElementById('otl-loans-list');
+            window.syncLoanBalances(selectedOTLStaff);
+            if (selectedOTLStaff.activeLoans.length === 0) {
+                list.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-400 text-xs">No active loans</td></tr>`;
+                return;
+            }
+            const m = document.getElementById('otl-month')?.value || editorMonth;
+            const y = document.getElementById('otl-year')?.value || editorYear;
+            const allocations = getLoanPaymentAllocations(selectedOTLStaff, `${y}-${m}`);
+            list.innerHTML = selectedOTLStaff.activeLoans.map((l, idx) => {
+                if (!l.id) l.id = `LN_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`;
+                const bal = Math.max(0, parseFloat(l.total) - parseFloat(l.paid || 0));
+                const isPaidOff = bal <= 0;
+                const allocation = parseFloat(allocations[String(l.id)] || allocations[getLoanRecordKey(l)] || 0) || 0;
+                const checked = allocation > 0;
+                return `<tr class="hover:bg-gray-50 ${isPaidOff ? 'bg-green-50 opacity-75' : ''}"><td class="px-3 py-2 text-center"><input id="loan-select-${idx}" type="checkbox" ${checked ? 'checked' : ''} ${isPaidOff ? 'disabled' : ''} onchange="window.toggleLoanSelection(${idx})" title="Deduct this loan this month"></td><td class="px-3 py-2 font-medium">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.startDate || '-'}</td><td class="px-3 py-2 text-right font-mono">${formatMoney(l.total)}</td><td class="px-3 py-2 text-right font-mono text-green-600">${formatMoney(l.paid || 0)}</td><td class="px-3 py-2 text-center font-bold text-gray-700">${l.paymentCount || 0}</td><td class="px-3 py-2 text-right font-mono text-xs text-blue-700">${checked ? formatMoney(Math.min(allocation, bal)) : formatMoney(0)}</td><td class="px-3 py-2 text-right font-mono font-bold ${isPaidOff ? 'text-green-600' : 'text-red-600'}">${formatMoney(bal)}</td><td class="px-3 py-2 text-center flex gap-1 justify-center">${isPaidOff ? `<button onclick="window.archiveLoan(${idx})" class="text-gray-500 hover:text-gray-800" title="Archive (Remove from Active)"><i data-lucide="folder-check" class="w-3.5 h-3.5"></i></button>` : `<button onclick="window.editLoan(${idx})" class="text-blue-400 hover:text-blue-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>`}<button onclick="window.removeLoan(${idx})" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td></tr>`;
+            }).join('');
+            if(window.lucide) lucide.createIcons();
+        }
+
         window.editLoan = (idx) => { const loan = selectedOTLStaff.activeLoans[idx]; document.getElementById('new-loan-desc').value = loan.description; document.getElementById('new-loan-amount').value = loan.total; document.getElementById('new-loan-date').value = loan.dateAdded; document.getElementById('new-loan-start').value = loan.startDate; editingLoanIndex = idx; document.getElementById('loan-form-title').innerText = "Edit Loan Details"; document.getElementById('btn-save-loan').innerText = "Update Loan"; document.getElementById('btn-cancel-loan').classList.remove('hidden'); };
         window.cancelLoanEdit = () => { editingLoanIndex = -1; document.getElementById('new-loan-desc').value = ""; document.getElementById('new-loan-amount').value = ""; document.getElementById('new-loan-date').value = ""; document.getElementById('new-loan-start').value = ""; document.getElementById('loan-form-title').innerText = "Add New Loan"; document.getElementById('btn-save-loan').innerText = "Add Loan"; document.getElementById('btn-cancel-loan').classList.add('hidden'); }
-        window.saveLoanRecord = async () => { const desc = document.getElementById('new-loan-desc').value; const amt = parseFloat(document.getElementById('new-loan-amount').value); const dateAdded = document.getElementById('new-loan-date').value; const startDate = document.getElementById('new-loan-start').value; if (!desc || !amt || !dateAdded || !startDate) return alert("Please fill all loan fields."); const loanData = { description: desc, total: amt, dateAdded: dateAdded, startDate: startDate, paid: (editingLoanIndex > -1) ? selectedOTLStaff.activeLoans[editingLoanIndex].paid : 0, paymentCount: (editingLoanIndex > -1) ? selectedOTLStaff.activeLoans[editingLoanIndex].paymentCount : 0 }; if(editingLoanIndex > -1) { selectedOTLStaff.activeLoans[editingLoanIndex] = loanData; } else { selectedOTLStaff.activeLoans.push(loanData); } selectedOTLStaff.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff)); renderLoanTable(); window.cancelLoanEdit(); window.renderOTLOverview(); };
+        window.saveLoanRecord = async () => { const desc = document.getElementById('new-loan-desc').value; const amt = parseFloat(document.getElementById('new-loan-amount').value); const dateAdded = document.getElementById('new-loan-date').value; const startDate = document.getElementById('new-loan-start').value; if (!desc || !amt || !dateAdded || !startDate) return alert("Please fill all loan fields."); const existingLoan = editingLoanIndex > -1 ? selectedOTLStaff.activeLoans[editingLoanIndex] : null; const loanData = { id: existingLoan?.id || `LN_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, description: desc, total: amt, dateAdded: dateAdded, startDate: startDate, paid: existingLoan ? existingLoan.paid : 0, paymentCount: existingLoan ? existingLoan.paymentCount : 0 }; if(editingLoanIndex > -1) { selectedOTLStaff.activeLoans[editingLoanIndex] = loanData; } else { selectedOTLStaff.activeLoans.push(loanData); } selectedOTLStaff.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff)); renderLoanTable(); window.cancelLoanEdit(); window.renderOTLOverview(); };
         window.addLoan = () => window.saveLoanRecord();
         window.printLoanStatement = () => { if(!selectedOTLStaff) return; const loans = selectedOTLStaff.activeLoans || []; const printW = window.open('', '', 'height=600,width=800'); printW.document.write('<html><head><title>Loan Statement</title><link href="https://cdn.tailwindcss.com" rel="stylesheet"></head><body class="bg-white p-8 font-sans">'); printW.document.write(`<div class="max-w-3xl mx-auto border p-8"><div class="text-center border-b pb-4 mb-6"><h1 class="text-2xl font-bold uppercase text-gray-800">Neerada School</h1><p class="text-sm text-gray-500">Loan Statement</p></div><div class="flex justify-between mb-6"><div><p class="text-xs text-gray-500 uppercase">Employee Name</p><p class="font-bold text-lg">${selectedOTLStaff.name}</p></div><div class="text-right"><p class="text-xs text-gray-500 uppercase">Date</p><p class="font-bold">${new Date().toLocaleDateString()}</p></div></div><h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Active Loans</h3><table class="w-full text-sm mb-8 border-collapse border border-gray-200"><thead class="bg-gray-50"><tr><th class="border p-2 text-left">Description</th><th class="border p-2 text-center">Date Added</th><th class="border p-2 text-right">Total Amount</th><th class="border p-2 text-right">Paid</th><th class="border p-2 text-right">Balance</th></tr></thead><tbody>${loans.map(l => `<tr><td class="border p-2">${l.description}</td><td class="border p-2 text-center">${l.dateAdded}</td><td class="border p-2 text-right">${formatMoney(l.total)}</td><td class="border p-2 text-right">${formatMoney(l.paid||0)}</td><td class="border p-2 text-right font-bold">${formatMoney(l.total - (l.paid||0))}</td></tr>`).join('') || '<tr><td colspan="5" class="border p-4 text-center">No active loans</td></tr>'}</tbody></table><div class="mt-8 text-xs text-gray-400 text-center">Generated by Neerada Payroll System</div></div>`); printW.document.write('</body></html>'); printW.document.close(); setTimeout(() => { printW.focus(); printW.print(); }, 500); };
         window.removeLoan = async (idx) => { if (!confirm("Delete this loan record?")) return; selectedOTLStaff.activeLoans.splice(idx, 1); selectedOTLStaff.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff)); renderLoanTable(); };
@@ -2501,7 +2764,7 @@
             
             let extraEarningsHTML = ''; if (currentPayrollState.overtimeAmount > 0) { te += parseFloat(currentPayrollState.overtimeAmount); extraEarningsHTML = `<div class="flex justify-between text-xs transition-all py-1 border-b border-gray-100 bg-yellow-50"><span class="text-gray-800 font-bold">Overtime (OT)</span><span class="font-mono text-gray-800 font-bold">${formatMoney(currentPayrollState.overtimeAmount)}</span></div>`; }
             const dr = cfg.deductions.map(f => { const v = currentPayrollState[f] || 0; td += parseFloat(v); return v > 0 ? `<div class="flex justify-between py-1 border-b text-xs text-red-600 font-medium"><span>${f}</span><span class="font-mono">(${formatMoney(v)})</span></div>` : ''; }).join('');
-            let extraDeductionsHTML = ''; if (currentPayrollState.loanDeduction > 0) { td += parseFloat(currentPayrollState.loanDeduction); const desc = currentPayrollState.loanDesc && currentPayrollState.loanDesc.trim() !== "" ? currentPayrollState.loanDesc : "Loan Repayment"; extraDeductionsHTML = `<div class="flex justify-between py-1 border-b text-xs text-red-700 font-bold bg-red-50"><span>${desc}</span><span class="font-mono">(${formatMoney(currentPayrollState.loanDeduction)})</span></div>`; }
+            const feeDeduction = parseFloat(currentPayrollState.feeDeduction) || 0; const loanDeduction = Math.max(0, (parseFloat(currentPayrollState.loanDeduction) || 0) - feeDeduction); let extraDeductionsHTML = ''; if (loanDeduction > 0) { td += loanDeduction; const desc = currentPayrollState.loanDesc && currentPayrollState.loanDesc.trim() !== "" ? currentPayrollState.loanDesc.replace(/\s*\+?\s*Fees:\s*[^+]+$/i, '').trim() : "Loan Repayment"; extraDeductionsHTML += `<div class="flex justify-between py-1 border-b text-xs text-red-700 font-bold bg-red-50"><span>${desc || 'Loan Repayment'}</span><span class="font-mono">(${formatMoney(loanDeduction)})</span></div>`; } if (feeDeduction > 0) { td += feeDeduction; extraDeductionsHTML += `<div class="flex justify-between py-1 border-b text-xs text-red-700 font-bold bg-red-50"><span>Fees</span><span class="font-mono">(${formatMoney(feeDeduction)})</span></div>`; }
             const totalDedRow = `<div class="flex justify-between mt-2 pt-2 bg-red-50 px-2 font-bold text-red-900 border-t border-red-200"><span>TOTAL DEDUCTIONS</span><span>(${formatMoney(td)})</span></div>`;
             const isGS = GS_DEPTS.includes(selectedEmployee.department) || selectedEmployee.campus === 'General Services';
             let notesHTML = ''; if (!isGS && dept !== 'English') { notesHTML += `<div class="mt-6 pt-4 border-t-2 border-gray-200"><h4 class="font-bold text-xs text-gray-700 underline mb-2">ໝາຍເຫດ:</h4><ol class="list-decimal list-inside text-[10px] text-gray-600 space-y-1"><li>ການຕອບຮັບຈາກ ຜປຄ ຫາຄູທີ່ສອນ/ຄູປະຈຳຫ້ອງ</li><li>ຄວາມເປັນລະບຽບໃນຫ້ອງທີ່ສອນ: ຄວາມເປັນລະບຽບຂອງໂຕະຕັ່ງ, ຄວາມສະອາດ ແລະ ອື່ນໆ</li><li>ທຸກໆການເຄື່ອນໄຫວໄປປະຊຸມ/ອອກວຽກກິດຈະກຳນອກ ຕ້ອງເຮັດບົດລາຍງານສົ່ງ.</li></ol></div>`; }
@@ -2529,7 +2792,7 @@
             if(dept === 'English') {
                 const d = state; const otPayment = (parseFloat(d.otHours)||0)*(parseFloat(d.otRate)||0); const earnSum = (parseFloat(d.basicPay)||0)+(parseFloat(d.accumulated)||0)+(parseFloat(d.increase)||0)+(parseFloat(d.earningsOthersUSD)||0); const grossUSD = earnSum + otPayment; const dedUSDSum = (parseFloat(d.profTax)||0)+(parseFloat(d.absences)||0)+(parseFloat(d.visa)||0)+(parseFloat(d.deductionsOthersUSD)||0); const netUSD = grossUSD - dedUSDSum; const convertible = netUSD - (parseFloat(d.cashOut)||0); const convertedLAK = convertible * (parseFloat(d.exchangeRate)||0); const extraLAK = (parseFloat(d.itLAK)||0)+(parseFloat(d.extraWorkOthersLAK)||0)+(parseFloat(d.stipendLAK)||0); const loanDed = parseFloat(d.loanDeduction)||0; const dedLAK = (parseFloat(d.insuranceLAK)||0)+(parseFloat(d.deductionsOthersLAK)||0) + loanDed; const finalLAK = convertedLAK + extraLAK - dedLAK;
                 msg += `💵 *EARNINGS (USD)*\nBasic Pay: ${fUSD(d.basicPay)}\nAccumulated: ${fUSD(d.accumulated)}\nIncreased: ${fUSD(d.increase)}\nOthers: ${fUSD(d.earningsOthersUSD)}\n\n⏱️ *OVERTIME (USD)*\nHours: ${d.otHours} | Rate: $${d.otRate}/hr\nPayment: ${fUSD(otPayment)}\n\n🌟 *EXTRA WORK (LAK)*\nIT: ${fLAK(d.itLAK)}\nOthers: ${fLAK(d.extraWorkOthersLAK)}\nStipend: ${fLAK(d.stipendLAK)}\n\nGross Pay: ${fUSD(grossUSD)}\nRate USD to LAK: ${fLAK(d.exchangeRate)}\n\n📉 *DEDUCTIONS*\nProf. Tax: (${fUSD(d.profTax)})\nAbsences: (${fUSD(d.absences)})\nVisa: (${fUSD(d.visa)})\nOthers: (${fUSD(d.deductionsOthersUSD)})\nTOTAL DEDUCTIONS (USD): (${fUSD(dedUSDSum)})\n\nInsurance (LAK): (${fLAK(d.insuranceLAK)})\nOthers (LAK): (${fLAK(d.deductionsOthersLAK)})\n`;
-                if(loanDed > 0) { const desc = d.loanDesc && d.loanDesc.trim() !== "" ? d.loanDesc : "Loan Repayment"; msg += `${desc} (LAK): (${fLAK(loanDed)})\n`; }
+                const feeDed = parseFloat(d.feeDeduction) || 0; const loanOnly = Math.max(0, loanDed - feeDed); if(loanOnly > 0) { const desc = d.loanDesc && d.loanDesc.trim() !== "" ? d.loanDesc.replace(/\s*\+?\s*Fees:\s*[^+]+$/i, '').trim() : "Loan Repayment"; msg += `${desc || 'Loan Repayment'} (LAK): (${fLAK(loanOnly)})\n`; } if(feeDed > 0) msg += `Fees (LAK): (${fLAK(feeDed)})\n`;
                 msg += `Total Deductions (LAK): (${fLAK(dedLAK)})\n`;
                 msg += getEnglishVisaMessage(selectedEmployee, d);
                 msg += `\n========================\nNet Pay (USD): ${fUSD(netUSD)}\nCash out: ${fUSD(d.cashOut)}\nConvertible to LAK: ${fUSD(convertible)}\n💰 *SALARY PAY (LAK): ${fLAK(finalLAK)}*\n========================\n`;
@@ -2568,7 +2831,7 @@
                 msg += `\n*Total Earnings: ${formatMoney(te)}*\n\n📉 *DEDUCTIONS*\n`;
                 cfg.deductions.forEach(f => { const v = state[f] || 0; if (v > 0) { td += parseFloat(v); msg += `- ${f}: (${formatMoney(v)})\n`; } });
                 
-                if (state.loanDeduction > 0) { td += parseFloat(state.loanDeduction); const desc = state.loanDesc && state.loanDesc.trim() !== "" ? state.loanDesc : "Loan Repayment"; msg += `- ${desc}: (${formatMoney(state.loanDeduction)})\n`; }
+                const feeDeduction = parseFloat(state.feeDeduction) || 0; const loanDeduction = Math.max(0, (parseFloat(state.loanDeduction) || 0) - feeDeduction); if (loanDeduction > 0) { td += loanDeduction; const desc = state.loanDesc && state.loanDesc.trim() !== "" ? state.loanDesc.replace(/\s*\+?\s*Fees:\s*[^+]+$/i, '').trim() : "Loan Repayment"; msg += `- ${desc || 'Loan Repayment'}: (${formatMoney(loanDeduction)})\n`; } if (feeDeduction > 0) { td += feeDeduction; msg += `- Fees: (${formatMoney(feeDeduction)})\n`; }
 
                 msg += `\n*Total Deductions: (${formatMoney(td)})*\n\n========================\n💰 *NET PAY (LAK): ${formatMoney(te - td)}*\n========================\n`;
                 
@@ -2860,6 +3123,7 @@
                 
                 if (ex && ex.activeLoans) data.activeLoans = ex.activeLoans;
                 if (ex && ex.archivedLoans) data.archivedLoans = ex.archivedLoans;
+                if (ex && ex.activeFees) data.activeFees = ex.activeFees;
                 if (data.department === 'English') {
                     data.visaTotalCost = ex && ex.visaTotalCost !== undefined ? ex.visaTotalCost : 0;
                     data.visaPaidAlready = ex && ex.visaPaidAlready !== undefined ? ex.visaPaidAlready : 0;
@@ -2977,9 +3241,11 @@ function isArounyRasphone(emp) {
 }
 
 function getArounyLoanPayment(emp, key) {
-    if (!isArounyRasphone(emp) || !isArounyLoanPeriod(key)) return 0;
-    const state = emp.payrollHistory && emp.payrollHistory[key];
-    return parseFloat(state && state.loanDeduction || 0) || 0;
+    const state = emp && emp.payrollHistory && emp.payrollHistory[key];
+    if (!state) return 0;
+    const loan = parseFloat(state.loanDeduction || 0) || 0;
+    const fee = parseFloat(state.feeDeduction || 0) || 0;
+    return loan + fee;
 }
 
 function getArounyEnglishPayrollState(emp, key, state) {
@@ -3604,6 +3870,7 @@ function getArounyEnglishPayrollState(emp, key, state) {
         }
     };
 
+
     window.bulkEmailPayslips = async () => {
         const { month, year } = getBulkPayslipPeriod();
         if (!month || !year) return alert('Please select the payslip month and year first.');
@@ -3635,5 +3902,379 @@ function getArounyEnglishPayrollState(emp, key, state) {
         }
         if (selectedEmployee && typeof renderPreview === 'function') renderPreview();
         alert(`Opened ${opened} email drafts. Each message is addressed to the employee's registered email.`);
+    };
+})();
+
+/* TARGETED CHANGE: OT & Loans -> Loan repayment input, live comma formatting, and payroll reflection. */
+(function () {
+    function plainLoanAmount(value) {
+        const raw = String(value ?? '').replace(/,/g, '').replace(/[^0-9.]/g, '');
+        const amount = Math.max(parseFloat(raw) || 0, 0);
+        return { raw, amount };
+    }
+    function formatLoanAmount(value) {
+        const amount = Math.max(parseFloat(String(value ?? '').replace(/,/g, '')) || 0, 0);
+        return amount ? amount.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '';
+    }
+    window.formatLoanPaymentInput = function (input) {
+        if (!input) return 0;
+        const before = String(input.value || '');
+        const caret = input.selectionStart == null ? before.length : input.selectionStart;
+        const digitsBeforeCaret = before.slice(0, caret).replace(/,/g, '').replace(/[^0-9.]/g, '').length;
+        const parsed = plainLoanAmount(before);
+        const formatted = parsed.raw === '' ? '' : formatLoanAmount(parsed.amount);
+        if (input.value !== formatted) {
+            input.value = formatted;
+            let newCaret = 0, seen = 0;
+            while (newCaret < formatted.length && seen < digitsBeforeCaret) {
+                if (/[0-9.]/.test(formatted[newCaret])) seen++;
+                newCaret++;
+            }
+            try { input.setSelectionRange(newCaret, newCaret); } catch (_) {}
+        }
+        return parsed.amount;
+    };
+    window.updateLoanSelectionTotal = function () {
+        const totalEl = document.getElementById('loan-repay-amount');
+        let total = 0;
+        if (selectedOTLStaff?.activeLoans) {
+            const key = `${document.getElementById('otl-year')?.value || editorYear}-${document.getElementById('otl-month')?.value || editorMonth}`;
+            const current = getLoanPaymentAllocations(selectedOTLStaff, key);
+            selectedOTLStaff.activeLoans.forEach((loan, idx) => {
+                const check = document.getElementById(`loan-select-${idx}`);
+                if (!check?.checked) return;
+                const balance = Math.max(0, (parseFloat(loan.total) || 0) - (parseFloat(loan.paid) || 0));
+                total += Math.min(parseFloat(current[String(loan.id || getLoanRecordKey(loan))] || 0) || 0, balance);
+            });
+        }
+        if (totalEl && document.activeElement !== totalEl) totalEl.value = total ? formatLoanAmount(total) : '';
+        return total;
+    };
+    window.updateLoanRepaymentAmount = function () {
+        return window.formatLoanPaymentInput(document.getElementById('loan-repay-amount'));
+    };
+    const originalSaveLoanPaymentForRequestedChange = window.saveLoanPayment;
+    window.saveLoanPayment = async function () {
+        const totalEl = document.getElementById('loan-repay-amount');
+        const enteredTotal = totalEl ? plainLoanAmount(totalEl.value).amount : 0;
+        const temporaryInputs = [];
+        if (selectedOTLStaff?.activeLoans) {
+            let remainingToAllocate = enteredTotal;
+            selectedOTLStaff.activeLoans.forEach((loan, idx) => {
+                const check = document.getElementById(`loan-select-${idx}`);
+                if (!check?.checked) return;
+                const balance = Math.max(0, (parseFloat(loan.total) || 0) - (parseFloat(loan.paid) || 0));
+                const amount = Math.min(remainingToAllocate, balance);
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.id = `loan-payment-${idx}`;
+                input.value = amount ? formatLoanAmount(amount) : '';
+                document.body.appendChild(input);
+                temporaryInputs.push(input);
+                remainingToAllocate -= amount;
+            });
+            if (totalEl) totalEl.value = enteredTotal ? formatLoanAmount(enteredTotal - remainingToAllocate) : '';
+        }
+        try {
+            await originalSaveLoanPaymentForRequestedChange.apply(this, arguments);
+            const selectedMonth = document.getElementById('otl-month')?.value || editorMonth;
+            const selectedYear = document.getElementById('otl-year')?.value || editorYear;
+            if (selectedEmployee && selectedOTLStaff && String(selectedEmployee.id) === String(selectedOTLStaff.id)) {
+                const fresh = await transact(STORE_EMPLOYEES, 'readonly', s => s.get(selectedEmployee.id));
+                if (fresh) {
+                    selectedEmployee = fresh;
+                    editorMonth = selectedMonth;
+                    editorYear = selectedYear;
+                    const monthEl = document.getElementById('editor-month');
+                    const yearEl = document.getElementById('editor-year');
+                    if (monthEl) monthEl.value = selectedMonth;
+                    if (yearEl) yearEl.value = selectedYear;
+                    const key = `${selectedYear}-${selectedMonth}`;
+                    currentPayrollState = fresh.payrollHistory && fresh.payrollHistory[key]
+                        ? JSON.parse(JSON.stringify(fresh.payrollHistory[key]))
+                        : createInitialState(fresh.department);
+                    recalculatePayrollState(fresh.department, currentPayrollState);
+                    renderEditor();
+                    renderPreview();
+                }
+            }
+        } finally {
+            temporaryInputs.forEach(input => input.remove());
+        }
+    };
+})();
+
+/* TARGETED CHANGE: OT & Loans -> Fees tab and monthly staff-fee deductions. */
+(function () {
+    let editingFeeIndex = -1;
+    function feeKey(fee) { if (!fee) return ''; return fee.id ? String(fee.id) : `${String(fee.description || '').trim()}|${fee.dateAdded || ''}|${parseFloat(fee.amount || 0) || 0}`; }
+    function getFeePaymentAllocations(staff, key) { const state = staff && staff.payrollHistory && staff.payrollHistory[key]; if (!state) return {}; const allocations = {}; if (Array.isArray(state.feePayments)) state.feePayments.forEach(item => { if (item && item.feeId) allocations[String(item.feeId)] = parseFloat(item.amount || 0) || 0; }); return allocations; }
+    function selectedFeeTotal() { let total = 0; (selectedOTLStaff?.activeFees || []).forEach((fee, idx) => { const check = document.getElementById(`fee-select-${idx}`); const input = document.getElementById(`fee-payment-${idx}`); if (check?.checked && input) { const amount = Math.max(parseFloat(String(input.value || '').replace(/,/g, '')) || 0, 0); input.value = amount ? formatMoney(amount) : ''; total += amount; } }); const totalEl = document.getElementById('fee-repay-amount'); if (totalEl) totalEl.value = total ? formatMoney(total) : ''; return total; }
+    window.switchLoanFeeTab = (tab) => { const loanPanel = document.getElementById('otl-loans-panel'); const feePanel = document.getElementById('otl-fees-panel'); const loanTab = document.getElementById('otl-tab-loans'); const feeTab = document.getElementById('otl-tab-fees'); if (!loanPanel || !feePanel) return; const loans = tab !== 'fees'; loanPanel.classList.toggle('hidden', !loans); feePanel.classList.toggle('hidden', loans); if (loanTab) loanTab.className = loans ? 'px-4 py-2 rounded-lg bg-orange-100 text-orange-800 text-xs font-bold' : 'px-4 py-2 rounded-lg text-gray-500 hover:bg-gray-100 text-xs font-bold'; if (feeTab) feeTab.className = !loans ? 'px-4 py-2 rounded-lg bg-green-100 text-green-800 text-xs font-bold' : 'px-4 py-2 rounded-lg text-gray-500 hover:bg-gray-100 text-xs font-bold'; if (!loans) renderFeeTable(); };
+    window.toggleFeeSelection = (idx) => { const check = document.getElementById(`fee-select-${idx}`); const input = document.getElementById(`fee-payment-${idx}`); const fee = selectedOTLStaff?.activeFees?.[idx]; if (!check || !input || !fee) return; if (check.checked && !parseFloat(String(input.value || '').replace(/,/g, ''))) input.value = formatMoney(parseFloat(fee.amount || 0) || 0); if (!check.checked) input.value = ''; selectedFeeTotal(); };
+    function renderFeeTable() { const list = document.getElementById('otl-fees-list'); if (!list || !selectedOTLStaff) return; if (!Array.isArray(selectedOTLStaff.activeFees)) selectedOTLStaff.activeFees = []; const m = document.getElementById('otl-month')?.value || editorMonth; const y = document.getElementById('otl-year')?.value || editorYear; const allocations = getFeePaymentAllocations(selectedOTLStaff, `${y}-${m}`); if (!selectedOTLStaff.activeFees.length) { list.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400 text-xs">No recurring fees recorded</td></tr>'; selectedFeeTotal(); return; } list.innerHTML = selectedOTLStaff.activeFees.map((fee, idx) => { if (!fee.id) fee.id = `FEE_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`; const allocation = parseFloat(allocations[String(fee.id)] || 0) || 0; const amount = Math.max(parseFloat(fee.amount || 0) || 0, 0); const checked = allocation > 0; return `<tr class="hover:bg-gray-50"><td class="px-3 py-2 text-center"><input id="fee-select-${idx}" type="checkbox" ${checked ? 'checked' : ''} onchange="window.toggleFeeSelection(${idx})" title="Deduct this fee this month"></td><td class="px-3 py-2 font-medium">${escapePayslipHTML(fee.description || 'Fee')}</td><td class="px-3 py-2 text-right font-mono">${formatMoney(amount)}</td><td class="px-3 py-2 text-center"><input id="fee-payment-${idx}" type="text" value="${checked ? formatMoney(allocation) : ''}" oninput="window.updateFeeSelectionTotal()" class="w-28 border rounded p-1 text-right text-xs font-mono text-red-600" placeholder="${formatMoney(amount)}"></td><td class="px-3 py-2 text-center"><button onclick="window.editFee(${idx})" class="text-blue-400 hover:text-blue-600 mr-2" title="Edit Fee"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button><button onclick="window.removeFee(${idx})" class="text-red-400 hover:text-red-600" title="Delete Fee"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td></tr>`; }).join(''); if (window.lucide) lucide.createIcons(); selectedFeeTotal(); }
+    window.updateFeeSelectionTotal = selectedFeeTotal;
+    window.updateFeeRepaymentAmount = function () {
+        return window.formatLoanPaymentInput(document.getElementById('fee-repay-amount'));
+    };
+    window.saveFeeRecord = async () => { if (!selectedOTLStaff) return; const desc = (document.getElementById('new-fee-desc')?.value || '').trim(); const amount = parseFloat(document.getElementById('new-fee-amount')?.value || 0) || 0; const dateAdded = document.getElementById('new-fee-date')?.value || ''; if (!desc || amount <= 0 || !dateAdded) return alert('Please fill the fee description, monthly amount, and date.'); if (!Array.isArray(selectedOTLStaff.activeFees)) selectedOTLStaff.activeFees = []; const existing = editingFeeIndex > -1 ? selectedOTLStaff.activeFees[editingFeeIndex] : null; const fee = { id: existing?.id || `FEE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, description: desc, amount, dateAdded }; if (editingFeeIndex > -1) selectedOTLStaff.activeFees[editingFeeIndex] = fee; else selectedOTLStaff.activeFees.push(fee); selectedOTLStaff.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); selectedOTLStaff = employees.find(e => String(e.id) === String(selectedOTLStaff.id)) || selectedOTLStaff; window.cancelFeeEdit(); renderFeeTable(); if (typeof window.renderOTLOverview === 'function') window.renderOTLOverview(); };
+    window.editFee = (idx) => { const fee = selectedOTLStaff?.activeFees?.[idx]; if (!fee) return; document.getElementById('new-fee-desc').value = fee.description || ''; document.getElementById('new-fee-amount').value = fee.amount || 0; document.getElementById('new-fee-date').value = fee.dateAdded || ''; editingFeeIndex = idx; document.getElementById('fee-form-title').innerText = 'Edit Fee'; document.getElementById('btn-cancel-fee').classList.remove('hidden'); };
+    window.cancelFeeEdit = () => { editingFeeIndex = -1; const desc = document.getElementById('new-fee-desc'); const amount = document.getElementById('new-fee-amount'); const date = document.getElementById('new-fee-date'); if (desc) desc.value = ''; if (amount) amount.value = ''; if (date) date.value = ''; const title = document.getElementById('fee-form-title'); if (title) title.innerText = 'Add Fee'; document.getElementById('btn-cancel-fee')?.classList.add('hidden'); };
+    window.removeFee = async (idx) => { if (!selectedOTLStaff?.activeFees?.[idx]) return; const fee = selectedOTLStaff.activeFees[idx]; if (!confirm(`Delete fee "${fee.description}"? Existing monthly payment records will remain recorded.`)) return; selectedOTLStaff.activeFees.splice(idx, 1); selectedOTLStaff.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); selectedOTLStaff = employees.find(e => String(e.id) === String(selectedOTLStaff.id)) || selectedOTLStaff; renderFeeTable(); };
+    window.saveFeePayment = async () => {
+        if (!selectedOTLStaff) return;
+        const m = document.getElementById('otl-month').value;
+        const y = document.getElementById('otl-year').value;
+        const key = `${y}-${m}`;
+        const fresh = await transact(STORE_EMPLOYEES, 'readonly', s => s.get(selectedOTLStaff.id));
+        if (fresh) selectedOTLStaff = fresh;
+        if (!selectedOTLStaff.payrollHistory) selectedOTLStaff.payrollHistory = {};
+        if (!selectedOTLStaff.payrollHistory[key]) selectedOTLStaff.payrollHistory[key] = createInitialState(selectedOTLStaff.department);
+        if (!Array.isArray(selectedOTLStaff.activeFees)) selectedOTLStaff.activeFees = [];
+        const totalEl = document.getElementById('fee-repay-amount');
+        const enteredTotal = Math.max(parseFloat(String(totalEl?.value || '').replace(/,/g, '')) || 0, 0);
+        const selectedFees = [];
+        selectedOTLStaff.activeFees.forEach((fee, idx) => {
+            const check = document.getElementById(`fee-select-${idx}`);
+            if (check?.checked) selectedFees.push({ fee, idx });
+        });
+        let remainingToAllocate = enteredTotal;
+        const payments = [];
+        selectedFees.forEach(({ fee }) => {
+            const amount = Math.min(remainingToAllocate, Math.max(parseFloat(fee.amount || 0) || 0, 0));
+            if (amount > 0) {
+                payments.push({ feeId: String(fee.id || feeKey(fee)), description: fee.description, amount });
+                remainingToAllocate -= amount;
+            }
+        });
+        const total = payments.reduce((sum, item) => sum + item.amount, 0);
+        const state = selectedOTLStaff.payrollHistory[key];
+        state.feeDeduction = total;
+        state.feePayments = payments;
+        state.feeDesc = payments.map(p => p.description).filter(Boolean).join(', ');
+        if (totalEl) totalEl.value = total ? formatMoney(total) : '';
+        selectedOTLStaff.lastModified = new Date().toISOString();
+        await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(selectedOTLStaff));
+        employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll());
+        selectedOTLStaff = employees.find(e => String(e.id) === String(selectedOTLStaff.id)) || selectedOTLStaff;
+        if (selectedEmployee && String(selectedEmployee.id) === String(selectedOTLStaff.id)) {
+            selectedEmployee = selectedOTLStaff;
+            editorMonth = m;
+            editorYear = y;
+            const monthEl = document.getElementById('editor-month');
+            const yearEl = document.getElementById('editor-year');
+            if (monthEl) monthEl.value = m;
+            if (yearEl) yearEl.value = y;
+            loadPeriodData();
+        }
+        renderFeeTable();
+        if (typeof window.renderOTLOverview === 'function') window.renderOTLOverview();
+        alert('Fee deduction applied. Payslip updated and fee payment recorded.');
+    };
+    const originalSelectOTLStaffForFees = window.selectOTLStaff;
+    window.selectOTLStaff = function (id) { const result = originalSelectOTLStaffForFees.apply(this, arguments); if (selectedOTLStaff) { if (!Array.isArray(selectedOTLStaff.activeFees)) selectedOTLStaff.activeFees = []; window.cancelFeeEdit(); renderFeeTable(); window.switchLoanFeeTab('loans'); } return result; };
+    const originalCloseOTLEditorForFees = window.closeOTLEditor;
+    window.closeOTLEditor = function () { editingFeeIndex = -1; const result = originalCloseOTLEditorForFees.apply(this, arguments); window.switchLoanFeeTab('loans'); return result; };
+    const originalCalculatePayrollFromStateForFees = window.calculatePayrollFromState;
+    window.calculatePayrollFromState = function (emp, state) { if (!state || !(parseFloat(state.feeDeduction || 0) > 0)) return originalCalculatePayrollFromStateForFees.apply(this, arguments); const temp = JSON.parse(JSON.stringify(state)); temp.loanDeduction = (parseFloat(temp.loanDeduction || 0) || 0) + (parseFloat(temp.feeDeduction || 0) || 0); temp.loanDesc = [String(temp.loanDesc || '').trim(), `Fees: ${String(temp.feeDesc || 'Monthly Fees').trim()}`].filter(Boolean).join(' + '); return originalCalculatePayrollFromStateForFees.call(this, emp, temp); };
+    function withFeeDeduction(callback) { if (!selectedEmployee || !currentPayrollState || !(parseFloat(currentPayrollState.feeDeduction || 0) > 0)) return callback(); const originalState = currentPayrollState; const temp = JSON.parse(JSON.stringify(originalState)); temp.loanDeduction = (parseFloat(temp.loanDeduction || 0) || 0) + (parseFloat(temp.feeDeduction || 0) || 0); temp.loanDesc = [String(temp.loanDesc || '').trim(), `Fees: ${String(temp.feeDesc || 'Monthly Fees').trim()}`].filter(Boolean).join(' + '); currentPayrollState = temp; try { return callback(); } finally { currentPayrollState = originalState; } }
+    const originalRenderPreviewForFees = window.renderPreview;
+    window.renderPreview = function () { return withFeeDeduction(() => originalRenderPreviewForFees.apply(this, arguments)); };
+    const originalConstructPayslipMessageForFees = window.constructPayslipMessage;
+    window.constructPayslipMessage = function () { return withFeeDeduction(() => originalConstructPayslipMessageForFees.apply(this, arguments)); };
+})();
+
+
+
+
+
+/* TARGETED CHANGE: OT & Loans -> skipped-payment history and deletion audit. */
+(function () {
+    function historyPeriodKeyFromDate(value) {
+        const text = String(value || '').trim();
+        const match = text.match(/^(\d{4})-(\d{1,2})/);
+        if (match) return `${match[1]}-${MONTHS[parseInt(match[2], 10) - 1] || ''}`;
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '';
+        return `${d.getFullYear()}-${MONTHS[d.getMonth()]}`;
+    }
+    function historyKeyIndex(key) {
+        const parts = String(key || '').split('-');
+        const year = parseInt(parts[0], 10);
+        const month = MONTHS.indexOf(parts.slice(1).join('-'));
+        return Number.isFinite(year) && month >= 0 ? year * 12 + month : -1;
+    }
+    function historyKeyFromIndex(index) {
+        const year = Math.floor(index / 12);
+        const month = index % 12;
+        return `${year}-${MONTHS[month]}`;
+    }
+    function getHistoryLoanRecords(emp) {
+        return [
+            ...(Array.isArray(emp?.activeLoans) ? emp.activeLoans : []),
+            ...(Array.isArray(emp?.archivedLoans) ? emp.archivedLoans : [])
+        ];
+    }
+    function getHistoryPaymentAmount(state) {
+        return Math.max(parseFloat(state?.loanDeduction || 0) || 0, 0);
+    }
+    function getHistoryPaymentAllocation(state, loan, legacyFirstLoan = false) {
+        if (Array.isArray(state?.loanPayments) && state.loanPayments.length) {
+            const id = loan?.id ? String(loan.id) : '';
+            const fallbackKey = getLoanRecordKey(loan);
+            return state.loanPayments.reduce((sum, item) => {
+                if (!item) return sum;
+                const itemId = item.loanId ? String(item.loanId) : '';
+                const matches = (id && itemId === id) || (!itemId && String(item.description || '').trim() === String(loan?.description || '').trim()) || (!itemId && !item.description && fallbackKey === getLoanRecordKey(loan));
+                return matches ? sum + (parseFloat(item.amount || 0) || 0) : sum;
+            }, 0);
+        }
+        return legacyFirstLoan ? getHistoryPaymentAmount(state) : 0;
+    }
+    function buildLoanPaymentHistory(emp) {
+        const payroll = emp?.payrollHistory || {};
+        const loans = getHistoryLoanRecords(emp);
+        const paymentKeys = Object.keys(payroll).filter(key => getHistoryPaymentAmount(payroll[key]) > 0);
+        const loanStartKeys = loans.map(loan => historyPeriodKeyFromDate(loan.startDate || loan.dateAdded)).filter(Boolean);
+        const firstKeyIndex = [...paymentKeys.map(historyKeyIndex), ...loanStartKeys.map(historyKeyIndex)].filter(i => i >= 0).sort((a, b) => a - b)[0];
+        const selectedMonth = document.getElementById('otl-month')?.value || MONTHS[new Date().getMonth()];
+        const selectedYear = parseInt(document.getElementById('otl-year')?.value, 10) || new Date().getFullYear();
+        const endKeyIndex = selectedYear * 12 + MONTHS.indexOf(selectedMonth);
+        if (!Number.isFinite(firstKeyIndex) || firstKeyIndex < 0 || endKeyIndex < firstKeyIndex) return [];
+        const rows = [];
+        for (let idx = firstKeyIndex; idx <= endKeyIndex; idx++) {
+            const key = historyKeyFromIndex(idx);
+            const state = payroll[key];
+            const payment = getHistoryPaymentAmount(state);
+            let outstanding = 0;
+            loans.forEach(loan => {
+                const total = Math.max(parseFloat(loan.total || 0) || 0, 0);
+                const startKey = historyPeriodKeyFromDate(loan.startDate || loan.dateAdded);
+                if (!total || (startKey && historyKeyIndex(startKey) > idx)) return;
+                let paidBefore = 0;
+                Object.keys(payroll).forEach(periodKey => {
+                    if (historyKeyIndex(periodKey) >= idx) return;
+                    paidBefore += getHistoryPaymentAllocation(payroll[periodKey], loan, loans.indexOf(loan) === 0);
+                });
+                if (paidBefore < total) outstanding += total - paidBefore;
+            });
+            if (payment > 0) rows.push({ key, amount: payment, skipped: false });
+            else if (outstanding > 0) rows.push({ key, amount: 0, skipped: true });
+        }
+        return rows.reverse();
+    }
+    function recomputeLoanCollectionsAfterPaymentChange(emp) {
+        const allLoans = getHistoryLoanRecords(emp);
+        const payroll = emp.payrollHistory || {};
+        const active = [];
+        const archived = [];
+        const byId = new Map();
+        const byDesc = new Map();
+        allLoans.forEach(loan => {
+            loan.paid = 0;
+            loan.paymentCount = 0;
+            if (loan.id) byId.set(String(loan.id), loan);
+            const desc = String(loan.description || '').trim();
+            if (desc && !byDesc.has(desc)) byDesc.set(desc, loan);
+        });
+        Object.values(payroll).forEach(state => {
+            let allocated = false;
+            if (Array.isArray(state.loanPayments) && state.loanPayments.length) {
+                state.loanPayments.forEach(item => {
+                    const amount = Math.max(parseFloat(item?.amount || 0) || 0, 0);
+                    if (!amount) return;
+                    const loan = (item.loanId && byId.get(String(item.loanId))) || (item.description && byDesc.get(String(item.description).trim()));
+                    if (!loan) return;
+                    allocated = true;
+                    loan.paid = (loan.paid || 0) + amount;
+                    loan.paymentCount = (loan.paymentCount || 0) + 1;
+                });
+            }
+            if (!allocated) {
+                const amount = getHistoryPaymentAmount(state);
+                if (amount > 0 && allLoans.length) {
+                    const loan = allLoans.find(l => String(state.loanDesc || '').trim() && String(l.description || '').trim() === String(state.loanDesc || '').trim()) || allLoans[0];
+                    loan.paid = (loan.paid || 0) + amount;
+                    loan.paymentCount = (loan.paymentCount || 0) + 1;
+                }
+            }
+        });
+        allLoans.forEach(loan => {
+            const total = Math.max(parseFloat(loan.total || 0) || 0, 0);
+            loan.paid = Math.min(loan.paid || 0, total);
+            if (total > 0 && loan.paid >= total) archived.push(loan);
+            else active.push(loan);
+        });
+        emp.activeLoans = active;
+        emp.archivedLoans = archived;
+    }
+    window.showOTLHistory = function (id) {
+        const emp = employees.find(e => e.id === id);
+        if (!emp) return;
+        currentHistoryId = id;
+        document.getElementById('otl-hist-name').innerText = emp.name;
+        const activeBody = document.getElementById('otl-hist-active-loans');
+        activeBody.innerHTML = emp.activeLoans?.length ? emp.activeLoans.map(l => `<tr><td class="px-3 py-2 text-gray-800 font-medium text-xs">${escapePayslipHTML(l.description || '')}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td><td class="px-3 py-2 text-right font-mono text-xs text-green-600">${formatMoney(l.paid || 0)}</td><td class="px-3 py-2 text-right font-mono text-xs font-bold text-red-600">${formatMoney(Math.max((parseFloat(l.total) || 0) - (parseFloat(l.paid) || 0), 0))}</td></tr>`).join('') : '<tr><td colspan="5" class="p-3 text-center text-gray-400 text-xs">No active loans.</td></tr>';
+        const archivedBody = document.getElementById('otl-hist-archived-loans');
+        archivedBody.innerHTML = emp.archivedLoans?.length ? emp.archivedLoans.map(l => `<tr><td class="px-3 py-2 font-medium text-xs">${escapePayslipHTML(l.description || '')}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td></tr>`).join('') : '<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No archived loans.</td></tr>';
+        const loanHistBody = document.getElementById('otl-hist-payments');
+        const historyRows = buildLoanPaymentHistory(emp);
+        let totalLoanPayments = 0;
+        const paymentRows = historyRows.map(row => {
+            if (row.skipped) return `<tr class="border-b border-red-100 bg-red-50"><td class="px-3 py-2 font-bold text-red-700 text-xs">${row.key}</td><td class="px-3 py-2 text-right font-bold text-red-700 text-xs">SKIPPED</td><td class="px-3 py-2"></td></tr>`;
+            totalLoanPayments += row.amount;
+            return `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${row.key}</td><td class="px-3 py-2 text-right font-mono font-bold text-green-700 text-xs">${formatMoney(row.amount)}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.editHistoryPayment('${row.key}', ${row.amount})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit Payment"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="window.deleteHistoryPayment('${row.key}', ${row.amount})" class="text-red-400 hover:text-red-600 p-1" title="Delete Payment"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`;
+        }).join('');
+        if (totalLoanPayments > 0) {
+            loanHistBody.innerHTML = paymentRows + `<tr class="border-t border-gray-200 bg-green-50"><td class="px-3 py-2 font-bold text-gray-800 text-xs text-right">TOTAL PAID</td><td class="px-3 py-2 text-right font-mono font-bold text-green-800 text-xs">${formatMoney(totalLoanPayments)}</td><td class="px-3 py-2"></td></tr>`;
+        } else {
+            loanHistBody.innerHTML = paymentRows || '<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No payment records found.</td></tr>';
+        }
+        const otHistBody = document.getElementById('otl-hist-ot');
+        const periods = Object.keys(emp.payrollHistory || {}).sort((a,b) => historyKeyIndex(b) - historyKeyIndex(a));
+        let otHistRows = '';
+        periods.forEach(key => {
+            const data = emp.payrollHistory[key];
+            const isEnglish = emp.department === 'English';
+            const otVal = isEnglish ? ((parseFloat(data.otHours || 0) || 0) * (parseFloat(data.otRate || 0) || 0)) : (parseFloat(data.overtimeAmount || 0) || 0);
+            if (otVal > 0) otHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-right text-xs text-gray-500">${isEnglish ? `${data.otHours} hrs @ $${data.otRate}` : 'Flat Amount'}</td><td class="px-3 py-2 text-right font-mono font-bold text-blue-700 text-xs">${isEnglish ? formatUSD(otVal) : formatMoney(otVal)}</td></tr>`;
+        });
+        otHistBody.innerHTML = otHistRows || '<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No overtime records found.</td></tr>';
+        const logBody = document.getElementById('otl-hist-deletion-log');
+        const logs = Array.isArray(emp.loanPaymentDeletionLogs) ? emp.loanPaymentDeletionLogs.slice().reverse() : [];
+        if (logBody) logBody.innerHTML = logs.length ? logs.map(log => `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 text-xs font-medium text-gray-700">${escapePayslipHTML(log.key)}</td><td class="px-3 py-2 text-right font-mono text-xs font-bold text-red-700">${formatMoney(log.amount)}</td><td class="px-3 py-2 text-right text-xs text-gray-500">${escapePayslipHTML(new Date(log.deletedAt).toLocaleString())}</td><td class="px-3 py-2 text-xs text-gray-600">Payment history deleted</td></tr>`).join('') : '<tr><td colspan="4" class="p-3 text-center text-gray-400 text-xs">No loan payment deletion logs.</td></tr>';
+        document.getElementById('otl-history-modal').classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    };
+    window.deleteHistoryPayment = async function (key, oldVal) {
+        const emp = employees.find(e => e.id === currentHistoryId);
+        if (!emp || !emp.payrollHistory?.[key]) return;
+        if (!confirm(`Delete payment record for ${key} of amount ${formatMoney(oldVal)}?`)) return;
+        const state = emp.payrollHistory[key];
+        state.loanDeduction = 0;
+        state.loanPayments = [];
+        state.loanDesc = '';
+        if (!Array.isArray(emp.loanPaymentDeletionLogs)) emp.loanPaymentDeletionLogs = [];
+        emp.loanPaymentDeletionLogs.push({ key, amount: parseFloat(oldVal) || 0, deletedAt: new Date().toISOString() });
+        recomputeLoanCollectionsAfterPaymentChange(emp);
+        emp.lastModified = new Date().toISOString();
+        await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp));
+        employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll());
+        const fresh = employees.find(e => e.id === currentHistoryId);
+        if (fresh) {
+            if (selectedOTLStaff && String(selectedOTLStaff.id) === String(currentHistoryId)) selectedOTLStaff = fresh;
+            if (selectedEmployee && String(selectedEmployee.id) === String(currentHistoryId)) {
+                selectedEmployee = fresh;
+                const selectedKey = `${document.getElementById('editor-year')?.value || editorYear}-${document.getElementById('editor-month')?.value || editorMonth}`;
+                if (selectedKey === key) {
+                    currentPayrollState = fresh.payrollHistory[key] ? JSON.parse(JSON.stringify(fresh.payrollHistory[key])) : createInitialState(fresh.department);
+                    recalculatePayrollState(fresh.department, currentPayrollState);
+                    renderEditor();
+                    renderPreview();
+                }
+            }
+        }
+        window.showOTLHistory(currentHistoryId);
+        if (selectedOTLStaff && String(selectedOTLStaff.id) === String(currentHistoryId)) { renderLoanTable(); window.renderOTLOverview(); }
     };
 })();

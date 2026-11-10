@@ -314,6 +314,15 @@
                                     </div>
                                 </div>
                                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div class="p-4 border-b border-gray-100 bg-purple-50"><h3 class="font-bold text-purple-800 flex items-center gap-2"><i data-lucide="receipt" class="w-4 h-4"></i> Fee Records (Selected Month)</h3></div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-sm text-left">
+                                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-4 py-3">Employee</th><th class="px-4 py-3">Fee</th><th class="px-4 py-3 text-right">Payment Amount</th></tr></thead>
+                                            <tbody id="otl-report-fees" class="divide-y divide-gray-100"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                     <div class="p-4 border-b border-gray-100 bg-blue-50"><h3 class="font-bold text-blue-800 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> Overtime Records (Selected Month)</h3></div>
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-sm text-left">
@@ -357,7 +366,7 @@
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 relative">
                                         <div class="flex justify-between items-center mb-3"><h4 id="loan-form-title" class="text-xs font-bold text-gray-700 uppercase">Add New Loan</h4><button id="btn-cancel-loan" onclick="window.cancelLoanEdit()" class="text-xs text-red-500 underline hidden">Cancel Edit</button></div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"><input id="new-loan-desc" type="text" placeholder="Loan Description (e.g. Car Loan)" class="border rounded p-2 text-sm"><input id="new-loan-amount" type="number" placeholder="Total Amount (LAK)" class="border rounded p-2 text-sm"></div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"><input id="new-loan-desc" type="text" placeholder="Loan Description (e.g. Car Loan)" class="border rounded p-2 text-sm"><input id="new-loan-amount" type="text" inputmode="decimal" oninput="window.formatLoanPaymentInput(this)" placeholder="Total Amount (LAK)" class="border rounded p-2 text-sm"></div>
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                                             <div><label class="text-[10px] font-bold text-gray-500 uppercase">Date of Loan</label><input id="new-loan-date" type="date" class="w-full border rounded p-2 text-sm"></div>
                                             <div><label class="text-[10px] font-bold text-gray-500 uppercase">Start Payment</label><input id="new-loan-start" type="date" class="w-full border rounded p-2 text-sm"></div>
@@ -381,14 +390,14 @@
                                             <div class="mb-3"><h4 class="text-xs font-bold text-gray-700 uppercase">Staff Fees</h4><p class="text-[10px] text-gray-500 mt-1">Monthly fees such as Room Rent or Study Fee. Select the fees to deduct for this month.</p></div>
                                             <div class="overflow-x-auto border rounded-lg mb-4">
                                                 <table class="w-full text-sm text-left">
-                                                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2 text-center">Deduct</th><th class="px-3 py-2">Fee</th><th class="px-3 py-2 text-right">Monthly Fee</th><th class="px-3 py-2 text-center">This Month</th><th class="px-3 py-2 text-center">Action</th></tr></thead>
+                                                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2 text-center">Deduct</th><th class="px-3 py-2">Fee Description</th><th class="px-3 py-2 text-right">Total Fee</th><th class="px-3 py-2 text-right">Paid This Month</th><th class="px-3 py-2 text-center">Action</th></tr></thead>
                                                     <tbody id="otl-fees-list" class="divide-y divide-gray-100"></tbody>
                                                 </table>
                                             </div>
                                             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                                                     <div><label class="text-[10px] font-bold text-gray-500 uppercase">Fee Description</label><input id="new-fee-desc" type="text" placeholder="e.g. Room Rent / Study Fee" class="w-full border rounded p-2 text-sm"></div>
-                                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Monthly Amount (LAK)</label><input id="new-fee-amount" type="number" min="0" placeholder="0" class="w-full border rounded p-2 text-sm"></div>
+                                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Monthly Amount (LAK)</label><input id="new-fee-amount" type="text" inputmode="decimal" oninput="window.formatLoanPaymentInput(this)" placeholder="0" class="w-full border rounded p-2 text-sm"></div>
                                                     <div><label class="text-[10px] font-bold text-gray-500 uppercase">Start / Record Date</label><input id="new-fee-date" type="date" class="w-full border rounded p-2 text-sm"></div>
                                                 </div>
                                                 <div class="flex justify-between items-center mt-3 gap-3">
@@ -397,7 +406,10 @@
                                                 </div>
                                             </div>
                                             <div class="mt-4 bg-green-50 p-4 rounded-lg border border-green-100 flex justify-between items-center gap-3">
-                                                <div><label class="block text-[10px] font-bold text-gray-500 mb-1">Total Fees This Month (LAK)</label><input id="fee-repay-amount" type="text" readonly class="w-48 border rounded p-2 text-sm font-mono font-bold text-red-600 bg-white" placeholder="0"></div>
+                                                <div class="flex flex-wrap items-end gap-4">
+                                                    <div><label class="block text-[10px] font-bold text-gray-500 mb-1">Total Fees This Month (LAK)</label><input id="fee-repay-amount" type="text" readonly class="w-48 border rounded p-2 text-sm font-mono font-bold text-red-600 bg-white" placeholder="0"></div>
+                                                    <div><label class="block text-[10px] font-bold text-gray-500 mb-1">Suggested Next Month Payment (LAK)</label><input id="fee-next-month-suggestion" type="text" readonly class="w-48 border rounded p-2 text-sm font-mono font-bold text-green-700 bg-white" placeholder="0"></div>
+                                                </div>
                                                 <button type="button" onclick="window.saveFeePayment()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-green-700 flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> Apply Fee Deduction</button>
                                             </div>
                                         </div>
@@ -614,6 +626,7 @@
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Current Active Loans</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-50 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Description</th><th class="px-3 py-2 text-center">Added</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Paid</th><th class="px-3 py-2 text-right">Balance</th></tr></thead><tbody id="otl-hist-active-loans" class="divide-y divide-gray-100"></tbody></table></div></div>
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Archived Loans (Completed)</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-500 text-xs uppercase"><tr><th class="px-3 py-2">Description</th><th class="px-3 py-2 text-center">Date Added</th><th class="px-3 py-2 text-right">Total</th></tr></thead><tbody id="otl-hist-archived-loans" class="divide-y divide-gray-100"></tbody></table></div></div>
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Loan Payment History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-green-50 text-green-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2 text-right">Payment Amount (LAK)</th><th class="px-3 py-2 text-center"></th></tr></thead><tbody id="otl-hist-payments" class="divide-y divide-gray-100"></tbody></table></div></div>
+                    <div><h3 class="text-xs font-bold text-purple-800 uppercase mb-2 border-b pb-1">Fee Payment History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-purple-50 text-purple-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2">Fee</th><th class="px-3 py-2 text-right">Payment Amount (LAK)</th></tr></thead><tbody id="otl-hist-fees" class="divide-y divide-gray-100"></tbody></table></div></div>
                     <div><h3 class="text-xs font-bold text-red-800 uppercase mb-2 border-b pb-1">Loan Payment Deletion Log</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-red-50 text-red-800 text-xs uppercase"><tr><th class="px-3 py-2">Month / Year</th><th class="px-3 py-2 text-right">Deleted Amount (LAK)</th><th class="px-3 py-2 text-right">Deleted Date & Time</th><th class="px-3 py-2">Action</th></tr></thead><tbody id="otl-hist-deletion-log" class="divide-y divide-gray-100"></tbody></table></div></div>
                     <div><h3 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Overtime History</h3><div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-blue-50 text-blue-800 text-xs uppercase"><tr><th class="px-3 py-2">Month</th><th class="px-3 py-2 text-right">Details</th><th class="px-3 py-2 text-right">Total OT Amount</th></tr></thead><tbody id="otl-hist-ot" class="divide-y divide-gray-100"></tbody></table></div></div>
                 </div>

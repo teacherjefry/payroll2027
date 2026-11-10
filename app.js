@@ -298,16 +298,40 @@
 
         function renderEnglishEditor(container) {
             const d = currentPayrollState; const fNum = (n) => (n && parseFloat(n) !== 0) ? parseFloat(n).toLocaleString('en-US') : '';
-            const renderInput = (label, field) => `<div><label class="block font-bold mb-1">${label}</label><input type="text" class="w-full border rounded p-1" value="${fNum(d[field])}" oninput="window.formatCurrencyInput(this); window.updatePayrollField('${field}', this.value)"></div>`;
+            const renderInput = (label, field) => `<div><label class="block font-bold mb-1">${label}</label><input type="text" data-field="${field}" class="w-full border rounded p-1" value="${fNum(d[field])}" oninput="window.formatCurrencyInput(this); window.updatePayrollField('${field}', this.value)"></div>`;
             container.innerHTML = `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-2 text-xs"><div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-blue-700">Settings</h3><div class="flex gap-2"><div><label class="block text-[9px] font-bold mb-1 flex items-center gap-1">Rate <button onclick="window.openRateCalculator()" class="text-blue-600 hover:bg-blue-100 p-0.5 rounded" title="Calculator & History"><i data-lucide="calculator" class="w-3 h-3"></i></button></label><input type="text" id="eng-exchange-rate" value="${fNum(d.exchangeRate)}" oninput="window.formatCurrencyInput(this); window.updatePayrollField('exchangeRate', this.value)" class="w-20 border rounded text-right p-1 bg-yellow-50 font-bold text-blue-800"></div><div><label class="block text-[9px] font-bold mb-1">CashOut</label><input type="text" value="${fNum(d.cashOut)}" oninput="window.formatCurrencyInput(this); window.updatePayrollField('cashOut', this.value)" class="w-12 border rounded text-right p-1"></div></div></div><h3 class="font-bold text-gray-600 mt-2 mb-2">EARNINGS (USD)</h3><div class="grid grid-cols-2 gap-x-4 gap-y-2">${renderInput('Basic Pay', 'basicPay')}${renderInput('Accumulated', 'accumulated')}${renderInput('Increase', 'increase')}${renderInput('Others', 'earningsOthersUSD')}</div><h3 class="font-bold text-gray-600 mt-4 mb-2">OVERTIME (USD)</h3><div class="grid grid-cols-2 gap-x-4 gap-y-2">${renderInput('Total Hours', 'otHours')}${renderInput('Rate/Hr', 'otRate')}</div><h3 class="font-bold text-purple-700 mt-4 mb-2">EXTRA WORK (LAK)</h3><div class="grid grid-cols-3 gap-x-4 gap-y-2">${renderInput('IT', 'itLAK')}${renderInput('Others', 'extraWorkOthersLAK')}${renderInput('Stipend', 'stipendLAK')}</div></div><div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mt-4 space-y-2 text-xs"><h3 class="font-bold text-red-700 border-b pb-2 mb-2">DEDUCTIONS</h3><div class="grid grid-cols-2 gap-x-4 gap-y-2">${renderInput('Prof. Tax', 'profTax')}${renderInput('Absences', 'absences')}${renderInput('Visa', 'visa')}${renderInput('Others', 'deductionsOthersUSD')}</div><h4 class="font-bold text-red-500 mt-4 mb-2 text-[10px]">LAK DEDUCTIONS</h4><div class="grid grid-cols-2 gap-x-4 gap-y-2">${renderInput('Insurance', 'insuranceLAK')}${renderInput('Others', 'deductionsOthersLAK')}</div></div>${renderEnglishVisaEditorSection(selectedEmployee, currentPayrollState)}<div class="mt-4"><label class="block text-xs font-bold text-gray-500 mb-1">Notes</label><textarea class="w-full border rounded p-2 text-xs" rows="2" oninput="window.updatePayrollField('notes', this.value)">${d.notes || ''}</textarea></div>`;
             if (window.lucide) lucide.createIcons();
         }
 
         window.updatePayrollField = async (f, v) => {
-            if(f === 'notes') { currentPayrollState[f] = v; } else { currentPayrollState[f] = parseFloat(String(v).replace(/,/g, '')) || 0; }
+            let visaWasCapped = false;
+            let visaRemainingForCurrentMonth = null;
+            if (f === 'visa' && selectedEmployee?.department === 'English') {
+                const enteredVisa = Math.max(0, parseFloat(String(v).replace(/,/g, '')) || 0);
+                const currentKey = `${editorYear}-${editorMonth}`;
+                const visaTotal = Math.max(0, parseFloat(selectedEmployee.visaTotalCost || 0) || 0);
+                const visaPaidBefore = getEnglishVisaTotalPayment(selectedEmployee, null, currentKey);
+                const visaRemaining = Math.max(0, visaTotal - visaPaidBefore);
+                visaRemainingForCurrentMonth = visaRemaining;
+                if (visaTotal > 0 && enteredVisa > visaRemaining) {
+                    alert(`Visa payment exceeds the remaining balance for ${selectedEmployee.name}.\n\nVisa total: ${formatUSD(visaTotal)}\nAlready paid before this month: ${formatUSD(visaPaidBefore)}\nRemaining balance: ${formatUSD(visaRemaining)}\n\nThe Visa amount will be changed immediately to ${formatUSD(visaRemaining)} so it will not be overcharged.`);
+                    currentPayrollState[f] = visaRemaining;
+                    visaWasCapped = true;
+                } else {
+                    currentPayrollState[f] = enteredVisa;
+                }
+            } else if(f === 'notes') { currentPayrollState[f] = v; } else { currentPayrollState[f] = parseFloat(String(v).replace(/,/g, '')) || 0; }
             recalculatePayrollState(selectedEmployee.department, currentPayrollState);
             const updateUIField = (fieldName) => { const input = document.querySelector(`input[data-field="${fieldName}"]`); if(input) { const val = currentPayrollState[fieldName]; input.value = (val && parseFloat(val) !== 0) ? parseFloat(val).toLocaleString('en-US') : ''; } };
             if (selectedEmployee.department.includes('Accounts')) { updateUIField('ເງີນເດືອນພື້ນຖານ'); } else if (selectedEmployee.department.includes('Invitational Teachers')) { updateUIField('ເງີນເດືອນ'); } else if (selectedEmployee.department !== 'English' && !GS_DEPTS.includes(selectedEmployee.department)) { const c = departmentConfigs[selectedEmployee.department]; if(c && c.earnings.length > 9) { updateUIField(c.earnings[5]); updateUIField(c.earnings[9]); } }
+            if (selectedEmployee.department === 'English' && f === 'visa') {
+                updateUIField('visa');
+                const visaDetails = getEnglishVisaDetails(selectedEmployee, currentPayrollState);
+                const totalEl = document.getElementById('english-visa-total-payment');
+                const remainingEl = document.getElementById('english-visa-remaining');
+                if (totalEl && visaDetails) totalEl.value = formatUSD(visaDetails.paid);
+                if (remainingEl && visaDetails) remainingEl.value = formatUSD(visaDetails.remaining);
+            }
             renderPreview();
         };
 
@@ -557,7 +581,7 @@
             const visaCost = visa ? fNum(visa.total) : '';
             const totalPayment = visa ? fNum(visa.paid) : '';
             const remaining = visa ? fNum(visa.remaining) : '';
-            return `<div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mt-4 text-xs"><div class="flex items-center justify-between border-b border-blue-200 pb-2 mb-3"><h3 class="font-bold text-blue-800">Visa Details</h3><button type="button" onclick="window.resetEnglishVisaData()" class="text-red-500 hover:bg-red-100 p-1.5 rounded" title="Reset Visa Details"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-bold mb-1">Visa Cost</label><input type="text" class="w-full border rounded p-1" value="${visaCost}" onchange="window.updateEnglishVisaDetails('visaTotalCost', this.value)"></div><div><label class="block font-bold mb-1">Visa Date</label><input type="date" class="w-full border rounded p-1" value="${visaDate}" onchange="window.updateEnglishVisaDetails('visaDate', this.value)"></div><div><label class="block font-bold mb-1">Total Payment</label><input type="text" readonly class="w-full border rounded p-1 bg-white text-green-700 font-bold" value="${totalPayment}"></div><div><label class="block font-bold mb-1">Remaining</label><input type="text" readonly class="w-full border rounded p-1 bg-white text-red-700 font-bold" value="${remaining}"></div></div></div>`;
+            return `<div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mt-4 text-xs"><div class="flex items-center justify-between border-b border-blue-200 pb-2 mb-3"><h3 class="font-bold text-blue-800">Visa Details</h3><button type="button" onclick="window.resetEnglishVisaData()" class="text-red-500 hover:bg-red-100 p-1.5 rounded" title="Reset Visa Details"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-bold mb-1">Visa Cost</label><input type="text" class="w-full border rounded p-1" value="${visaCost}" onchange="window.updateEnglishVisaDetails('visaTotalCost', this.value)"></div><div><label class="block font-bold mb-1">Visa Date</label><input type="date" class="w-full border rounded p-1" value="${visaDate}" onchange="window.updateEnglishVisaDetails('visaDate', this.value)"></div><div><label class="block font-bold mb-1">Total Payment</label><input id="english-visa-total-payment" type="text" readonly class="w-full border rounded p-1 bg-white text-green-700 font-bold" value="${totalPayment}"></div><div><label class="block font-bold mb-1">Remaining</label><input id="english-visa-remaining" type="text" readonly class="w-full border rounded p-1 bg-white text-red-700 font-bold" value="${remaining}"></div></div></div>`;
         }
 
         function getEnglishVisaTotalPayment(emp, currentState = null, currentKey = null) {
@@ -880,6 +904,27 @@
         window.saveEmployeePayrollData = async () => {
             if(!selectedEmployee) return;
             const key = `${editorYear}-${editorMonth}`;
+            if (selectedEmployee.department === 'English') {
+                const visaTotal = Math.max(0, parseFloat(selectedEmployee.visaTotalCost || 0) || 0);
+                if (visaTotal > 0) {
+                    const visaPaidBefore = getEnglishVisaTotalPayment(selectedEmployee, null, key);
+                    const visaRemaining = Math.max(0, visaTotal - visaPaidBefore);
+                    const enteredVisa = Math.max(0, parseFloat(currentPayrollState.visa || 0) || 0);
+                    if (enteredVisa > visaRemaining) {
+                        currentPayrollState.visa = visaRemaining;
+                        const visaInput = document.querySelector('input[data-field="visa"]');
+                        if (visaInput) visaInput.value = visaRemaining ? visaRemaining.toLocaleString('en-US') : '';
+                        recalculatePayrollState(selectedEmployee.department, currentPayrollState);
+                        const visaDetails = getEnglishVisaDetails(selectedEmployee, currentPayrollState);
+                        const totalEl = document.getElementById('english-visa-total-payment');
+                        const remainingEl = document.getElementById('english-visa-remaining');
+                        if (totalEl && visaDetails) totalEl.value = formatUSD(visaDetails.paid);
+                        if (remainingEl && visaDetails) remainingEl.value = formatUSD(visaDetails.remaining);
+                        const shouldSave = confirm(`Visa payment for ${selectedEmployee.name} is higher than the remaining balance.\n\nOnly ${formatUSD(visaRemaining)} will be saved and deducted from salary/net pay.\n\nConfirm save?`);
+                        if (!shouldSave) return;
+                    }
+                }
+            }
             if (!selectedEmployee.payrollHistory) selectedEmployee.payrollHistory = {};
             selectedEmployee.payrollHistory[key] = JSON.parse(JSON.stringify(currentPayrollState));
             window.syncLoanBalances(selectedEmployee); 
@@ -938,6 +983,7 @@
                             copiedState.visa = visaBalance;
                             cappedVisaStaff.push(emp.name);
                             visaCopied = visaBalance > 0;
+                            alert(`Visa payment exceeds the remaining balance for ${emp.name}.\n\nVisa total: ${formatUSD(visaTotal)}\nAlready paid before ${currM} ${y}: ${formatUSD(visaPaidBefore)}\nRemaining balance: ${formatUSD(visaBalance)}\n\nOnly the remaining ${formatUSD(visaBalance)} will be copied and deducted from salary/net pay. The full previous payment will NOT be charged.`);
                         } else if (visaTotal > 0) {
                             visaCopied = copiedState.visa > 0;
                         }
@@ -1275,15 +1321,38 @@
         window.importData = (input) => { const file = input.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const data = JSON.parse(e.target.result); let importedConfig = data.config || data.departmentConfigs; let importedEmployees = data.employees; let importedHistory = data.history || data.history_logs; if (!importedEmployees) throw new Error("Invalid backup: Missing employees data."); if (importedConfig && !Array.isArray(importedConfig)) { importedConfig = Object.entries(importedConfig).map(([name, cfg]) => ({ name, ...cfg })); } if (!importedConfig) { if(!confirm("Backup is missing configuration data. Import employees only?")) return; importedConfig = []; } else { if (!confirm(`Restore backup from ${new Date(data.timestamp || Date.now()).toLocaleDateString()}? This will overwrite current data.`)) return; } if (importedConfig.length > 0) { await transact(STORE_CONFIG, 'readwrite', s => s.clear()); for (const c of importedConfig) await transact(STORE_CONFIG, 'readwrite', s => s.put(c)); departmentConfigs = {}; importedConfig.forEach(c => departmentConfigs[c.name] = { earnings: c.earnings, deductions: c.deductions }); } await transact(STORE_EMPLOYEES, 'readwrite', s => s.clear()); for (const em of importedEmployees) { if(!em.payrollHistory) em.payrollHistory = {}; if(!em.savedPayroll) em.savedPayroll = {}; await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(em)); } employees = importedEmployees; await transact(STORE_HISTORY, 'readwrite', s => s.clear()); if (importedHistory) { for (const h of importedHistory) await transact(STORE_HISTORY, 'readwrite', s => s.put(h)); history = importedHistory; } alert("Restore successful! Reloading..."); localStorage.setItem('neerada_current_view', 'app'); window.location.reload(); } catch (err) { alert("Error importing data: " + err.message); console.error("Import Error Details:", err); } }; reader.readAsText(file); input.value = ''; };
 
         // Rate Calculator Additions
+        window.enableRateCalculatorDrag = () => {
+            const win = document.getElementById('rate-calc-window');
+            const handle = document.getElementById('rate-calc-drag-handle');
+            if (!win || !handle || handle.dataset.dragReady === '1') return;
+            handle.dataset.dragReady = '1';
+            handle.addEventListener('mousedown', (event) => {
+                if (event.target.closest('button')) return;
+                const rect = win.getBoundingClientRect();
+                const startX = event.clientX, startY = event.clientY;
+                const startLeft = rect.left, startTop = rect.top;
+                const move = (e) => {
+                    win.style.position = 'fixed';
+                    win.style.left = `${startLeft + (e.clientX - startX)}px`;
+                    win.style.top = `${startTop + (e.clientY - startY)}px`;
+                    win.style.margin = '0';
+                };
+                const stop = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', stop); };
+                document.addEventListener('mousemove', move);
+                document.addEventListener('mouseup', stop);
+                event.preventDefault();
+            });
+        };
         window.openRateCalculator = () => {
             const list = document.getElementById('calc-history-list'); const englishStaff = employees.filter(e => e.department === 'English'); const historyMap = {};
             englishStaff.forEach(emp => { if(emp.payrollHistory) { Object.keys(emp.payrollHistory).forEach(key => { const rate = emp.payrollHistory[key].exchangeRate; if(rate > 0) historyMap[key] = rate; }); } });
-            const sortedKeys = Object.keys(historyMap).sort((a, b) => b.localeCompare(a)); 
+            const sortedKeys = Object.keys(historyMap).sort((a, b) => { const [ay, am] = a.split('-'); const [by, bm] = b.split('-'); const ai = MONTHS.indexOf(am); const bi = MONTHS.indexOf(bm); return (parseInt(by, 10) - parseInt(ay, 10)) || (bi - ai); });
             if (sortedKeys.length === 0) list.innerHTML = `<p class="text-gray-400 text-center py-2">No history recorded.</p>`; else list.innerHTML = sortedKeys.map(key => `<div class="flex justify-between border-b border-gray-200 last:border-0 py-1"><span>${key}</span><span class="font-mono font-bold text-blue-800">${formatMoney(historyMap[key])}</span></div>`).join('');
             document.getElementById('calc-buy').value = ''; document.getElementById('calc-sell').value = ''; document.getElementById('calc-result').innerText = '0';
+            window.enableRateCalculatorDrag();
             document.getElementById('rate-calc-modal').classList.remove('hidden'); document.getElementById('rate-calc-modal').classList.add('flex');
         };
-        window.calculateRateAvg = () => { const buy = parseFloat(document.getElementById('calc-buy').value) || 0; const sell = parseFloat(document.getElementById('calc-sell').value) || 0; const avg = (buy + sell) / 2; document.getElementById('calc-result').innerText = avg > 0 ? formatMoney(avg) : '0'; };
+        window.calculateRateAvg = () => { const buy = parseFloat(document.getElementById('calc-buy').value.replace(/,/g, '')) || 0; const sell = parseFloat(document.getElementById('calc-sell').value.replace(/,/g, '')) || 0; const avg = (buy + sell) / 2; document.getElementById('calc-result').innerText = avg > 0 ? formatMoney(avg) : '0'; };
         window.applyCalculatedRate = () => {
             const rate = parseFloat(document.getElementById('calc-result').innerText.replace(/[^\d.]/g, ''));
             if (rate > 0) {

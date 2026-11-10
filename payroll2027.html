@@ -574,15 +574,15 @@
         </div>
 
         <div id="rate-calc-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[200] p-4">
-            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <div id="rate-calc-window" class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <div id="rate-calc-drag-handle" class="flex justify-between items-center mb-4 border-b pb-2 cursor-move select-none">
                     <h2 class="text-lg font-bold text-blue-900 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5"></i> Rate Calculator</h2>
                     <button onclick="document.getElementById('rate-calc-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
                 <div class="space-y-4 mb-6">
                     <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buying Rate</label><input type="number" id="calc-buy" class="w-full border rounded p-2 text-sm" placeholder="0" oninput="window.calculateRateAvg()"></div>
-                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Selling Rate</label><input type="number" id="calc-sell" class="w-full border rounded p-2 text-sm" placeholder="0" oninput="window.calculateRateAvg()"></div>
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buying Rate</label><input type="text" inputmode="decimal" id="calc-buy" class="w-full border rounded p-2 text-sm" placeholder="0" oninput="window.formatCurrencyInput(this); window.calculateRateAvg()"></div>
+                        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Selling Rate</label><input type="text" inputmode="decimal" id="calc-sell" class="w-full border rounded p-2 text-sm" placeholder="0" oninput="window.formatCurrencyInput(this); window.calculateRateAvg()"></div>
                     </div>
                     <div class="bg-blue-50 p-3 rounded text-center border border-blue-100"><p class="text-xs text-blue-800 uppercase font-bold mb-1">Calculated Average</p><p id="calc-result" class="text-2xl font-mono font-bold text-blue-900">0</p></div>
                     <button onclick="window.applyCalculatedRate()" class="w-full py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors shadow-md text-sm">Apply Rate to All English Staff</button>

@@ -162,9 +162,13 @@
         function renderEmployeeList() {
             const list = document.getElementById('employee-list'); if(!list) return; let filtered = employees;
             const staffSearch = String(document.getElementById('staff-manager-search')?.value || '').trim().toLowerCase();
-            if (staffSearch) filtered = filtered.filter(e => String(e.name || '').toLowerCase().includes(staffSearch));
-            if (currentFilter.campus !== 'All') filtered = filtered.filter(e => e.campus === currentFilter.campus);
-            if (currentFilter.department !== 'All') filtered = filtered.filter(e => e.department === currentFilter.department);
+            if (staffSearch) {
+                // Staff Manager search is global: a name search ignores the currently selected department/campus filter.
+                filtered = filtered.filter(e => String(e.name || '').toLowerCase().includes(staffSearch));
+            } else {
+                if (currentFilter.campus !== 'All') filtered = filtered.filter(e => e.campus === currentFilter.campus);
+                if (currentFilter.department !== 'All') filtered = filtered.filter(e => e.department === currentFilter.department);
+            }
             list.innerHTML = filtered.map(emp => {
                 const hasBankName = emp.bankAccountName && emp.bankAccountName.trim() !== '';
                 const resignedBadge = emp.status === 'Resigned' ? `<span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-bold ml-2">Resigned</span>` : '';
@@ -304,34 +308,10 @@
         }
 
         window.updatePayrollField = async (f, v) => {
-            let visaWasCapped = false;
-            let visaRemainingForCurrentMonth = null;
-            if (f === 'visa' && selectedEmployee?.department === 'English') {
-                const enteredVisa = Math.max(0, parseFloat(String(v).replace(/,/g, '')) || 0);
-                const currentKey = `${editorYear}-${editorMonth}`;
-                const visaTotal = Math.max(0, parseFloat(selectedEmployee.visaTotalCost || 0) || 0);
-                const visaPaidBefore = getEnglishVisaTotalPayment(selectedEmployee, null, currentKey);
-                const visaRemaining = Math.max(0, visaTotal - visaPaidBefore);
-                visaRemainingForCurrentMonth = visaRemaining;
-                if (visaTotal > 0 && enteredVisa > visaRemaining) {
-                    alert(`Visa payment exceeds the remaining balance for ${selectedEmployee.name}.\n\nVisa total: ${formatUSD(visaTotal)}\nAlready paid before this month: ${formatUSD(visaPaidBefore)}\nRemaining balance: ${formatUSD(visaRemaining)}\n\nThe Visa amount will be changed immediately to ${formatUSD(visaRemaining)} so it will not be overcharged.`);
-                    currentPayrollState[f] = visaRemaining;
-                    visaWasCapped = true;
-                } else {
-                    currentPayrollState[f] = enteredVisa;
-                }
-            } else if(f === 'notes') { currentPayrollState[f] = v; } else { currentPayrollState[f] = parseFloat(String(v).replace(/,/g, '')) || 0; }
+            if(f === 'notes') { currentPayrollState[f] = v; } else { currentPayrollState[f] = parseFloat(String(v).replace(/,/g, '')) || 0; }
             recalculatePayrollState(selectedEmployee.department, currentPayrollState);
             const updateUIField = (fieldName) => { const input = document.querySelector(`input[data-field="${fieldName}"]`); if(input) { const val = currentPayrollState[fieldName]; input.value = (val && parseFloat(val) !== 0) ? parseFloat(val).toLocaleString('en-US') : ''; } };
             if (selectedEmployee.department.includes('Accounts')) { updateUIField('ເງີນເດືອນພື້ນຖານ'); } else if (selectedEmployee.department.includes('Invitational Teachers')) { updateUIField('ເງີນເດືອນ'); } else if (selectedEmployee.department !== 'English' && !GS_DEPTS.includes(selectedEmployee.department)) { const c = departmentConfigs[selectedEmployee.department]; if(c && c.earnings.length > 9) { updateUIField(c.earnings[5]); updateUIField(c.earnings[9]); } }
-            if (selectedEmployee.department === 'English' && f === 'visa') {
-                updateUIField('visa');
-                const visaDetails = getEnglishVisaDetails(selectedEmployee, currentPayrollState);
-                const totalEl = document.getElementById('english-visa-total-payment');
-                const remainingEl = document.getElementById('english-visa-remaining');
-                if (totalEl && visaDetails) totalEl.value = formatUSD(visaDetails.paid);
-                if (remainingEl && visaDetails) remainingEl.value = formatUSD(visaDetails.remaining);
-            }
             renderPreview();
         };
 
@@ -573,6 +553,19 @@
             return emp.visaDate;
         }
 
+        function capEnglishVisaPayment(emp, state, currentKey) {
+            if (!emp || emp.department !== 'English' || !state) return { requested: 0, applied: 0, remaining: 0, capped: false };
+            const total = Math.max(0, parseFloat(emp.visaTotalCost || 0) || 0);
+            if (total <= 0) return { requested: Math.max(0, parseFloat(state.visa || 0) || 0), applied: Math.max(0, parseFloat(state.visa || 0) || 0), remaining: 0, capped: false };
+            const key = currentKey || `${editorYear}-${editorMonth}`;
+            const paidBefore = getEnglishVisaTotalPayment(emp, null, key);
+            const remaining = Math.max(0, total - paidBefore);
+            const requested = Math.max(0, parseFloat(state.visa || 0) || 0);
+            const applied = Math.min(requested, remaining);
+            state.visa = applied;
+            return { requested, applied, remaining, capped: requested > remaining };
+        }
+
         function renderEnglishVisaEditorSection(emp, state) {
             if (!emp || emp.department !== 'English') return '';
             const visa = getEnglishVisaDetails(emp, state);
@@ -581,7 +574,7 @@
             const visaCost = visa ? fNum(visa.total) : '';
             const totalPayment = visa ? fNum(visa.paid) : '';
             const remaining = visa ? fNum(visa.remaining) : '';
-            return `<div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mt-4 text-xs"><div class="flex items-center justify-between border-b border-blue-200 pb-2 mb-3"><h3 class="font-bold text-blue-800">Visa Details</h3><button type="button" onclick="window.resetEnglishVisaData()" class="text-red-500 hover:bg-red-100 p-1.5 rounded" title="Reset Visa Details"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-bold mb-1">Visa Cost</label><input type="text" class="w-full border rounded p-1" value="${visaCost}" onchange="window.updateEnglishVisaDetails('visaTotalCost', this.value)"></div><div><label class="block font-bold mb-1">Visa Date</label><input type="date" class="w-full border rounded p-1" value="${visaDate}" onchange="window.updateEnglishVisaDetails('visaDate', this.value)"></div><div><label class="block font-bold mb-1">Total Payment</label><input id="english-visa-total-payment" type="text" readonly class="w-full border rounded p-1 bg-white text-green-700 font-bold" value="${totalPayment}"></div><div><label class="block font-bold mb-1">Remaining</label><input id="english-visa-remaining" type="text" readonly class="w-full border rounded p-1 bg-white text-red-700 font-bold" value="${remaining}"></div></div></div>`;
+            return `<div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mt-4 text-xs"><div class="flex items-center justify-between border-b border-blue-200 pb-2 mb-3"><h3 class="font-bold text-blue-800">Visa Details</h3><button type="button" onclick="window.resetEnglishVisaData()" class="text-red-500 hover:bg-red-100 p-1.5 rounded" title="Reset Visa Details"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button></div><div class="grid grid-cols-2 gap-3"><div><label class="block font-bold mb-1">Visa Cost</label><input type="text" class="w-full border rounded p-1" value="${visaCost}" onchange="window.updateEnglishVisaDetails('visaTotalCost', this.value)"></div><div><label class="block font-bold mb-1">Visa Date</label><input type="date" class="w-full border rounded p-1" value="${visaDate}" onchange="window.updateEnglishVisaDetails('visaDate', this.value)"></div><div><label class="block font-bold mb-1">Total Payment</label><input type="text" readonly class="w-full border rounded p-1 bg-white text-green-700 font-bold" value="${totalPayment}"></div><div><label class="block font-bold mb-1">Remaining</label><input type="text" readonly class="w-full border rounded p-1 bg-white text-red-700 font-bold" value="${remaining}"></div></div></div>`;
         }
 
         function getEnglishVisaTotalPayment(emp, currentState = null, currentKey = null) {
@@ -706,20 +699,48 @@
             if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
         };
 
-        window.openVisaSummary = () => {
-            const modal = document.getElementById('visa-summary-modal');
+        function getVisaSummaryYears() {
+            const years = new Set([String(new Date().getFullYear())]);
+            employees.forEach(emp => {
+                if (emp.department !== 'English' || !(parseFloat(emp.visaTotalCost || 0) > 0)) return;
+                const visaDate = String(emp.visaDate || '');
+                const match = visaDate.match(/^(\d{4})/);
+                if (match) years.add(match[1]);
+                Object.keys(emp.payrollHistory || {}).forEach(key => {
+                    const parts = String(key).split('-');
+                    if (parts.length === 2 && /^\d{4}$/.test(parts[0]) && (parseFloat(emp.payrollHistory[key]?.visa || 0) || 0) > 0) years.add(parts[0]);
+                });
+            });
+            return Array.from(years).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+        }
+
+        function renderVisaSummary(year = 'All') {
             const rows = document.getElementById('visa-summary-rows');
-            if (!modal || !rows) return;
+            if (!rows) return;
             const visaStaff = employees
-                .filter(emp => Math.max(0, parseFloat(emp.visaTotalCost || 0) || 0) > 0)
+                .filter(emp => emp.department === 'English' && Math.max(0, parseFloat(emp.visaTotalCost || 0) || 0) > 0)
+                .filter(emp => year === 'All' || String(emp.visaDate || '').startsWith(String(year)))
                 .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
             rows.innerHTML = visaStaff.length ? visaStaff.map(emp => {
                 const total = Math.max(0, parseFloat(emp.visaTotalCost || 0) || 0);
-                const records = emp.department === 'English' ? getEnglishVisaPaymentRecords(emp) : [];
+                const records = getEnglishVisaPaymentRecords(emp);
                 const paid = Math.min(total, records.reduce((sum, record) => sum + record.amount, 0));
                 const remaining = Math.max(0, total - paid);
-                return `<tr><td class="px-3 py-2 font-bold text-gray-800">${escapePayslipHTML(emp.name || '-')}</td><td class="px-3 py-2 text-right font-mono">${formatUSD(total)}</td><td class="px-3 py-2 text-right font-mono text-green-700">${formatUSD(paid)}</td><td class="px-3 py-2 text-right font-mono text-red-700">${formatUSD(remaining)}</td></tr>`;
-            }).join('') : '<tr><td colspan="4" class="px-3 py-8 text-center text-gray-400">No staff with visa records.</td></tr>';
+                return `<tr><td class="px-3 py-2 font-bold text-gray-800">${escapePayslipHTML(emp.name || '-')}</td><td class="px-3 py-2 text-center font-mono">${escapePayslipHTML(emp.visaDate || '-')}</td><td class="px-3 py-2 text-right font-mono">${formatUSD(total)}</td><td class="px-3 py-2 text-right font-mono text-green-700">${formatUSD(paid)}</td><td class="px-3 py-2 text-right font-mono text-red-700">${formatUSD(remaining)}</td></tr>`;
+            }).join('') : '<tr><td colspan="5" class="px-3 py-8 text-center text-gray-400">No English staff with visa records for this year.</td></tr>';
+        }
+
+        window.openVisaSummary = () => {
+            const modal = document.getElementById('visa-summary-modal');
+            const yearSelect = document.getElementById('visa-summary-year');
+            if (!modal) return;
+            if (yearSelect) {
+                const current = yearSelect.value || String(new Date().getFullYear());
+                yearSelect.innerHTML = '<option value="All">All Years</option>' + getVisaSummaryYears().map(year => `<option value="${year}">${year}</option>`).join('');
+                yearSelect.value = getVisaSummaryYears().includes(current) || current === 'All' ? current : 'All';
+                yearSelect.onchange = () => renderVisaSummary(yearSelect.value);
+            }
+            renderVisaSummary(yearSelect?.value || 'All');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             if (window.lucide) lucide.createIcons();
@@ -847,7 +868,12 @@
             document.getElementById('employee-history-modal').classList.remove('hidden'); if (window.lucide) lucide.createIcons(); 
         };
         window.applyHistoryEntry = (key) => { if (!selectedEmployee?.payrollHistory?.[key]) return; currentPayrollState = JSON.parse(JSON.stringify(selectedEmployee.payrollHistory[key])); renderEditor(); document.getElementById('employee-history-modal').classList.add('hidden'); };
-        window.loadPreviousMonthData = () => { if (!selectedEmployee) return; const currMIdx = MONTHS.indexOf(editorMonth); let prevMIdx = currMIdx - 1; let prevYr = parseInt(editorYear); if (prevMIdx < 0) { prevMIdx = 11; prevYr--; } const prevKey = `${prevYr}-${MONTHS[prevMIdx]}`; if (selectedEmployee.payrollHistory && selectedEmployee.payrollHistory[prevKey]) { if (confirm(`Copy data from ${MONTHS[prevMIdx]} ${prevYr}?`)) { currentPayrollState = JSON.parse(JSON.stringify(selectedEmployee.payrollHistory[prevKey])); window.syncLoanBalances(selectedEmployee); if (currentPayrollState.loanDeduction > 0 && selectedEmployee.activeLoans && selectedEmployee.activeLoans.length > 0) { const loan = selectedEmployee.activeLoans[0]; const balance = parseFloat(loan.total) - parseFloat(loan.paid || 0); if (balance <= 0) { currentPayrollState.loanDeduction = 0; currentPayrollState.loanDesc = ""; } else if (currentPayrollState.loanDeduction > balance) { currentPayrollState.loanDeduction = balance; } if (currentPayrollState.loanDeduction > 0) currentPayrollState.loanDesc = loan.description; } else { currentPayrollState.loanDeduction = 0; currentPayrollState.loanDesc = ""; } renderEditor(); } } else { alert(`No data found for ${MONTHS[prevMIdx]} ${prevYr}`); } };
+        window.loadPreviousMonthData = () => { if (!selectedEmployee) return; const currMIdx = MONTHS.indexOf(editorMonth); let prevMIdx = currMIdx - 1; let prevYr = parseInt(editorYear); if (prevMIdx < 0) { prevMIdx = 11; prevYr--; } const prevKey = `${prevYr}-${MONTHS[prevMIdx]}`; if (selectedEmployee.payrollHistory && selectedEmployee.payrollHistory[prevKey]) { if (confirm(`Copy data from ${MONTHS[prevMIdx]} ${prevYr}?`)) { currentPayrollState = JSON.parse(JSON.stringify(selectedEmployee.payrollHistory[prevKey]));
+                if (selectedEmployee.department === 'English') {
+                    const visaCheck = capEnglishVisaPayment(selectedEmployee, currentPayrollState, `${editorYear}-${editorMonth}`);
+                    if (visaCheck.capped) alert(`Visa payment is more than the remaining amount. Only ${formatUSD(visaCheck.applied)} will be copied for ${editorMonth} ${editorYear}.`);
+                }
+                window.syncLoanBalances(selectedEmployee); if (currentPayrollState.loanDeduction > 0 && selectedEmployee.activeLoans && selectedEmployee.activeLoans.length > 0) { const loan = selectedEmployee.activeLoans[0]; const balance = parseFloat(loan.total) - parseFloat(loan.paid || 0); if (balance <= 0) { currentPayrollState.loanDeduction = 0; currentPayrollState.loanDesc = ""; } else if (currentPayrollState.loanDeduction > balance) { currentPayrollState.loanDeduction = balance; } if (currentPayrollState.loanDeduction > 0) currentPayrollState.loanDesc = loan.description; } else { currentPayrollState.loanDeduction = 0; currentPayrollState.loanDesc = ""; } renderEditor(); } } else { alert(`No data found for ${MONTHS[prevMIdx]} ${prevYr}`); } };
         window.resetCurrentPayroll = () => { if (!selectedEmployee) return; if (confirm("Reset current editor data to zero?")) { currentPayrollState = createInitialState(selectedEmployee.department); renderEditor(); } };
 
         // Communication outputs
@@ -904,28 +930,16 @@
         window.saveEmployeePayrollData = async () => {
             if(!selectedEmployee) return;
             const key = `${editorYear}-${editorMonth}`;
+            if (!selectedEmployee.payrollHistory) selectedEmployee.payrollHistory = {};
             if (selectedEmployee.department === 'English') {
-                const visaTotal = Math.max(0, parseFloat(selectedEmployee.visaTotalCost || 0) || 0);
-                if (visaTotal > 0) {
-                    const visaPaidBefore = getEnglishVisaTotalPayment(selectedEmployee, null, key);
-                    const visaRemaining = Math.max(0, visaTotal - visaPaidBefore);
-                    const enteredVisa = Math.max(0, parseFloat(currentPayrollState.visa || 0) || 0);
-                    if (enteredVisa > visaRemaining) {
-                        currentPayrollState.visa = visaRemaining;
-                        const visaInput = document.querySelector('input[data-field="visa"]');
-                        if (visaInput) visaInput.value = visaRemaining ? visaRemaining.toLocaleString('en-US') : '';
-                        recalculatePayrollState(selectedEmployee.department, currentPayrollState);
-                        const visaDetails = getEnglishVisaDetails(selectedEmployee, currentPayrollState);
-                        const totalEl = document.getElementById('english-visa-total-payment');
-                        const remainingEl = document.getElementById('english-visa-remaining');
-                        if (totalEl && visaDetails) totalEl.value = formatUSD(visaDetails.paid);
-                        if (remainingEl && visaDetails) remainingEl.value = formatUSD(visaDetails.remaining);
-                        const shouldSave = confirm(`Visa payment for ${selectedEmployee.name} is higher than the remaining balance.\n\nOnly ${formatUSD(visaRemaining)} will be saved and deducted from salary/net pay.\n\nConfirm save?`);
-                        if (!shouldSave) return;
-                    }
+                const visaCheck = capEnglishVisaPayment(selectedEmployee, currentPayrollState, key);
+                if (visaCheck.capped) {
+                    alert(`Visa payment is more than the remaining amount. Only ${formatUSD(visaCheck.applied)} will be recorded.`);
+                    const visaInput = document.querySelector('input[data-field="visa"]');
+                    if (visaInput) visaInput.value = visaCheck.applied ? visaCheck.applied.toLocaleString('en-US') : '';
+                    renderPreview();
                 }
             }
-            if (!selectedEmployee.payrollHistory) selectedEmployee.payrollHistory = {};
             selectedEmployee.payrollHistory[key] = JSON.parse(JSON.stringify(currentPayrollState));
             window.syncLoanBalances(selectedEmployee); 
             selectedEmployee.lastModified = new Date().toISOString();
@@ -976,15 +990,14 @@
                         const existingCurrentVisa = emp.payrollHistory && emp.payrollHistory[currKey] ? Math.max(0, parseFloat(emp.payrollHistory[currKey].visa || 0) || 0) : 0;
                         const visaPaidBefore = getEnglishVisaTotalPayment(emp, null, currKey);
                         const visaBalance = Math.max(0, visaTotal - visaPaidBefore);
-                        if (visaTotal > 0 && visaBalance <= 0) {
+                        if (visaBalance <= 0) {
                             copiedState.visa = 0;
                             finishedVisaStaff.push(emp.name);
-                        } else if (visaTotal > 0 && previousState.visa > visaBalance) {
+                        } else if (previousState.visa > visaBalance) {
                             copiedState.visa = visaBalance;
-                            cappedVisaStaff.push(emp.name);
+                            cappedVisaStaff.push(`${emp.name} — previous payment ${formatUSD(previousState.visa)}, remaining balance ${formatUSD(visaBalance)}; only ${formatUSD(visaBalance)} will be deducted from salary/net pay.`);
                             visaCopied = visaBalance > 0;
-                            alert(`Visa payment exceeds the remaining balance for ${emp.name}.\n\nVisa total: ${formatUSD(visaTotal)}\nAlready paid before ${currM} ${y}: ${formatUSD(visaPaidBefore)}\nRemaining balance: ${formatUSD(visaBalance)}\n\nOnly the remaining ${formatUSD(visaBalance)} will be copied and deducted from salary/net pay. The full previous payment will NOT be charged.`);
-                        } else if (visaTotal > 0) {
+                        } else {
                             visaCopied = copiedState.visa > 0;
                         }
                         if (visaCopied) {
@@ -1075,28 +1088,42 @@
             let updatedCount = 0, skippedCount = 0, cappedCount = 0;
             for (const emp of employees) {
                 window.syncLoanBalances(emp);
-                if (emp.activeLoans && emp.activeLoans.length > 0) {
-                    const loan = emp.activeLoans[0]; 
-                    if (emp.payrollHistory && emp.payrollHistory[prevKey]) {
-                        const prevPayment = parseFloat(emp.payrollHistory[prevKey].loanDeduction || 0);
-                        if (prevPayment > 0) {
-                            if (!emp.payrollHistory) emp.payrollHistory = {};
-                            if (!emp.payrollHistory[currKey]) emp.payrollHistory[currKey] = createInitialState(emp.department);
-                            const currHist = emp.payrollHistory[currKey];
-                            if (parseFloat(currHist.loanDeduction || 0) > 0) { skippedCount++; continue; }
-                            const balance = parseFloat(loan.total) - parseFloat(loan.paid || 0);
-                            if (balance <= 0) continue; // paid off
-                            let paymentToApply = prevPayment; if (paymentToApply > balance) { paymentToApply = balance; cappedCount++; }
-                            currHist.loanDeduction = paymentToApply; currHist.loanDesc = loan.description;
-                            window.syncLoanBalances(emp); emp.lastModified = new Date().toISOString();
-                            await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); updatedCount++;
-                        }
+                const previousState = emp.payrollHistory && emp.payrollHistory[prevKey];
+                if (!previousState || !emp.activeLoans?.length) continue;
+                if (!emp.payrollHistory) emp.payrollHistory = {};
+                if (!emp.payrollHistory[currKey]) emp.payrollHistory[currKey] = createInitialState(emp.department);
+                const currHist = emp.payrollHistory[currKey];
+                if (parseFloat(currHist.loanDeduction || 0) > 0) { skippedCount++; continue; }
+                const allocations = Array.isArray(previousState.loanPayments) && previousState.loanPayments.length
+                    ? previousState.loanPayments.map(item => ({ loanId: item?.loanId ? String(item.loanId) : '', description: item?.description || '', amount: Math.max(parseFloat(item?.amount || 0) || 0, 0) }))
+                    : [{ loanId: '', description: String(previousState.loanDesc || '').trim(), amount: Math.max(parseFloat(previousState.loanDeduction || 0) || 0, 0) }];
+                const newPayments = [];
+                let remainingTotal = 0;
+                for (const allocation of allocations) {
+                    if (allocation.amount <= 0) continue;
+                    const loan = (allocation.loanId && emp.activeLoans.find(l => String(l.id || '') === allocation.loanId))
+                        || (allocation.description && emp.activeLoans.find(l => String(l.description || '').trim() === allocation.description))
+                        || (!allocation.loanId && !allocation.description && emp.activeLoans[0]);
+                    if (!loan) continue;
+                    const balance = Math.max(0, (parseFloat(loan.total) || 0) - (parseFloat(loan.paid) || 0));
+                    if (balance <= 0) continue;
+                    const paymentToApply = Math.min(allocation.amount, balance);
+                    if (paymentToApply < allocation.amount) cappedCount++;
+                    if (paymentToApply > 0) {
+                        newPayments.push({ loanId: String(loan.id || getLoanRecordKey(loan)), description: loan.description, amount: paymentToApply });
+                        remainingTotal += paymentToApply;
                     }
                 }
+                if (remainingTotal <= 0) continue;
+                currHist.loanDeduction = remainingTotal;
+                currHist.loanPayments = newPayments;
+                currHist.loanDesc = newPayments.map(item => item.description).filter(Boolean).join(', ');
+                window.syncLoanBalances(emp); emp.lastModified = new Date().toISOString();
+                await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); updatedCount++;
             }
             employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.renderOTLOverview();
             if (selectedOTLStaff) window.selectOTLStaff(selectedOTLStaff.id);
-            alert(`Bulk Copy Complete!\n\n- Updated: ${updatedCount} staff\n- Auto-Capped to Balance: ${cappedCount} staff\n- Skipped (Already Paid): ${skippedCount} staff`);
+            alert(`Bulk Copy Complete!\n\n- Updated: ${updatedCount} staff\n- Auto-Capped to Balance: ${cappedCount} allocations\n- Skipped (Already Paid): ${skippedCount} staff`);
         };
 
         // Complete remaining boilerplate logic required by the system
@@ -1178,7 +1205,57 @@
         window.showOTLHistory = (id) => { const emp = employees.find(e => e.id === id); if (!emp) return; currentHistoryId = id; document.getElementById('otl-hist-name').innerText = emp.name; const activeBody = document.getElementById('otl-hist-active-loans'); if (emp.activeLoans && emp.activeLoans.length > 0) { activeBody.innerHTML = emp.activeLoans.map((l, idx) => `<tr><td class="px-3 py-2 text-gray-800 font-medium text-xs">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td><td class="px-3 py-2 text-right font-mono text-xs text-green-600">${formatMoney(l.paid || 0)}</td><td class="px-3 py-2 text-right font-mono text-xs font-bold text-red-600">${formatMoney(l.total - (l.paid || 0))}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.deleteLoanFromHistory(${idx}, 'active')" class="text-red-400 hover:text-red-600 p-1" title="Delete Loan"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`).join(''); } else { activeBody.innerHTML = `<tr><td colspan="6" class="p-3 text-center text-gray-400 text-xs">No active loans.</td></tr>`; } const archivedBody = document.getElementById('otl-hist-archived-loans'); if (emp.archivedLoans && emp.archivedLoans.length > 0) { archivedBody.innerHTML = emp.archivedLoans.map((l, idx) => `<tr><td class="px-3 py-2 font-medium text-xs">${l.description}</td><td class="px-3 py-2 text-center text-xs text-gray-500">${l.dateAdded || '-'}</td><td class="px-3 py-2 text-right font-mono text-xs">${formatMoney(l.total)}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.restoreArchivedLoan(${idx})" class="text-green-500 hover:text-green-700 p-1" title="Restore to Active"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button><button onclick="window.deleteLoanFromHistory(${idx}, 'archived')" class="text-red-400 hover:text-red-600 p-1" title="Delete Permanently"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`).join(''); } else { archivedBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-400 text-xs">No archived loans.</td></tr>`; } const histData = emp.payrollHistory || {}; const periods = Object.keys(histData).sort((a,b) => { const [yA, mA] = a.split('-'); const [yB, mB] = b.split('-'); const yearDiff = parseInt(yB, 10) - parseInt(yA, 10); if (yearDiff !== 0) return yearDiff; return (parseInt(mB, 10) || (MONTHS.indexOf(mB) + 1)) - (parseInt(mA, 10) || (MONTHS.indexOf(mA) + 1)); }); const loanHistBody = document.getElementById('otl-hist-payments'); let loanHistRows = ''; let hasLoanHist = false; let totalLoanPayments = 0; const otHistBody = document.getElementById('otl-hist-ot'); let otHistRows = ''; let hasOtHist = false; periods.forEach(key => { const data = histData[key]; const paid = parseFloat(data.loanDeduction || 0); if (paid > 0) { hasLoanHist = true; totalLoanPayments += paid; loanHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-right font-mono font-bold text-green-700 text-xs">${formatMoney(paid)}</td><td class="px-3 py-2 text-center flex justify-center gap-1"><button onclick="window.editHistoryPayment('${key}', ${paid})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit Payment"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="window.deleteHistoryPayment('${key}', ${paid})" class="text-red-400 hover:text-red-600 p-1" title="Delete Payment"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td></tr>`; } const isEnglish = emp.department === 'English'; let otVal = 0; let details = ''; if (isEnglish) { const hrs = parseFloat(data.otHours || 0); const rate = parseFloat(data.otRate || 0); if (hrs > 0) { otVal = hrs * rate; details = `${hrs} hrs @ $${rate}`; } } else { otVal = parseFloat(data.overtimeAmount || 0); details = 'Flat Amount'; } if (otVal > 0) { hasOtHist = true; otHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-right text-xs text-gray-500">${details}</td><td class="px-3 py-2 text-right font-mono font-bold text-blue-700 text-xs">${isEnglish ? formatUSD(otVal) : formatMoney(otVal)}</td></tr>`; } }); if (hasLoanHist) { loanHistRows += `<tr class="border-t border-gray-200 bg-green-50"><td class="px-3 py-2 font-bold text-gray-800 text-xs text-right">TOTAL PAID</td><td class="px-3 py-2 text-right font-mono font-bold text-green-800 text-xs">${formatMoney(totalLoanPayments)}</td><td class="px-3 py-2"></td></tr>`; } loanHistBody.innerHTML = hasLoanHist ? loanHistRows : `<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No payment records found.</td></tr>`; const feeHistBody = document.getElementById('otl-hist-fees'); let feeHistRows = ''; let hasFeeHist = false; let totalFeePayments = 0; periods.forEach(key => { const data = histData[key]; const payments = Array.isArray(data?.feePayments) ? data.feePayments : []; payments.forEach(payment => { const amount = parseFloat(payment?.amount || 0) || 0; if (amount > 0) { hasFeeHist = true; totalFeePayments += amount; feeHistRows += `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 font-medium text-gray-700 text-xs">${key}</td><td class="px-3 py-2 text-xs text-gray-600">${escapePayslipHTML(payment.description || 'Fee')}</td><td class="px-3 py-2 text-right font-mono font-bold text-purple-700 text-xs">${formatMoney(amount)}</td></tr>`; } }); }); if (hasFeeHist) feeHistRows += `<tr class="border-t border-gray-200 bg-purple-50"><td colspan="2" class="px-3 py-2 font-bold text-gray-800 text-xs text-right">TOTAL PAID</td><td class="px-3 py-2 text-right font-mono font-bold text-purple-800 text-xs">${formatMoney(totalFeePayments)}</td></tr>`; if (feeHistBody) feeHistBody.innerHTML = hasFeeHist ? feeHistRows : `<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No fee payment records found.</td></tr>`; otHistBody.innerHTML = hasOtHist ? otHistRows : `<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No overtime records found.</td></tr>`; document.getElementById('otl-history-modal').classList.remove('hidden'); if (window.lucide) lucide.createIcons(); };
         window.deleteLoanFromHistory = async (idx, type) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp) return; if (!confirm(`Are you sure you want to delete this ${type} loan permanently?`)) return; if (type === 'active') { emp.activeLoans.splice(idx, 1); } else { emp.archivedLoans.splice(idx, 1); } emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); if(selectedOTLStaff && selectedOTLStaff.id === currentHistoryId) { selectedOTLStaff = emp; renderLoanTable(); window.renderOTLOverview(); } };
         window.restoreArchivedLoan = async (idx) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp) return; if(!confirm("Restore this loan to Active status?")) return; const loan = emp.archivedLoans[idx]; if(!emp.activeLoans) emp.activeLoans = []; emp.activeLoans.push(loan); emp.archivedLoans.splice(idx, 1); emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); };
-        window.editHistoryPayment = async (key, oldVal) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp || !emp.payrollHistory[key]) return; const newValStr = prompt(`Edit Loan Payment for ${key}.\nCurrent Amount: ${oldVal}\nEnter new amount (LAK):`, oldVal); if(newValStr === null) return; const newVal = parseFloat(newValStr.replace(/,/g, '')) || 0; if(isNaN(newVal)) return alert("Invalid amount."); emp.payrollHistory[key].loanDeduction = newVal; window.syncLoanBalances(emp); emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); if(selectedOTLStaff && selectedOTLStaff.id === currentHistoryId) { selectedOTLStaff = emp; renderLoanTable(); window.renderOTLOverview(); } };
+        window.editHistoryPayment = async (key, oldVal, loanId = '') => {
+            const emp = employees.find(e => e.id === currentHistoryId);
+            if (!emp || !emp.payrollHistory[key]) return;
+            const newValStr = prompt(`Edit Loan Payment for ${key}.\nCurrent Amount: ${oldVal}\nEnter new amount (LAK):`, oldVal);
+            if (newValStr === null) return;
+            const parsed = parseFloat(String(newValStr).replace(/,/g, ''));
+            if (!Number.isFinite(parsed) || parsed < 0) return alert("Invalid amount.");
+            const state = emp.payrollHistory[key];
+            if (Array.isArray(state.loanPayments) && state.loanPayments.length && loanId) {
+                const target = state.loanPayments.find(item => item?.loanId && String(item.loanId) === String(loanId));
+                if (!target) return alert("Loan payment record not found.");
+                target.amount = parsed;
+                state.loanPayments = state.loanPayments.filter(item => (parseFloat(item?.amount || 0) || 0) > 0);
+                state.loanDeduction = state.loanPayments.reduce((sum, item) => sum + (parseFloat(item?.amount || 0) || 0), 0);
+                state.loanDesc = state.loanPayments.map(item => item?.description).filter(Boolean).join(', ');
+            } else {
+                state.loanDeduction = parsed;
+                if (loanId) {
+                    const loan = [...(emp.activeLoans || []), ...(emp.archivedLoans || [])].find(item => String(item?.id || '') === String(loanId));
+                    state.loanDesc = loan?.description || state.loanDesc || '';
+                }
+            }
+            if (loanId) {
+                const allLoans = [...(emp.activeLoans || []), ...(emp.archivedLoans || [])];
+                const targetLoan = allLoans.find(item => String(item?.id || '') === String(loanId));
+                if (targetLoan && Array.isArray(emp.archivedLoans) && emp.archivedLoans.includes(targetLoan)) {
+                    let paid = 0, count = 0;
+                    Object.entries(emp.payrollHistory || {}).forEach(([periodKey, periodState]) => {
+                        const parts = String(periodKey).split('-');
+                        const periodIndex = parts.length >= 2 ? (parseInt(parts[0], 10) * 12 + MONTHS.indexOf(parts.slice(1).join('-'))) : -1;
+                        const dateMatch = String(targetLoan.dateAdded || targetLoan.startDate || '').match(/^(\d{4})-(\d{1,2})/);
+                        const loanIndex = dateMatch ? (parseInt(dateMatch[1], 10) * 12 + parseInt(dateMatch[2], 10) - 1) : -1;
+                        if (periodIndex < 0 || (loanIndex >= 0 && periodIndex < loanIndex)) return;
+                        (Array.isArray(periodState?.loanPayments) ? periodState.loanPayments : []).forEach(item => {
+                            if (item?.loanId && String(item.loanId) === String(loanId)) { const amount = Math.max(parseFloat(item.amount || 0) || 0, 0); paid += amount; if (amount > 0) count++; }
+                        });
+                    });
+                    targetLoan.paid = Math.min(paid, Math.max(parseFloat(targetLoan.total || 0) || 0, 0));
+                    targetLoan.paymentCount = count;
+                    if (targetLoan.paid < (parseFloat(targetLoan.total || 0) || 0)) {
+                        emp.archivedLoans = emp.archivedLoans.filter(item => item !== targetLoan);
+                        emp.activeLoans = [...(emp.activeLoans || []), targetLoan];
+                    }
+                }
+            }
+            window.syncLoanBalances(emp); emp.lastModified = new Date().toISOString();
+            await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp));
+            employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll());
+            window.showOTLHistory(currentHistoryId);
+            if(selectedOTLStaff && selectedOTLStaff.id === currentHistoryId) { selectedOTLStaff = emp; renderLoanTable(); window.renderOTLOverview(); }
+        };
         window.deleteHistoryPayment = async (key, oldVal) => { const emp = employees.find(e => e.id === currentHistoryId); if (!emp || !emp.payrollHistory[key]) return; if(!confirm(`Delete payment record for ${key} of amount ${formatMoney(oldVal)}?`)) return; emp.payrollHistory[key].loanDeduction = 0; window.syncLoanBalances(emp); emp.lastModified = new Date().toISOString(); await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp)); employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll()); window.showOTLHistory(currentHistoryId); if(selectedOTLStaff && selectedOTLStaff.id === currentHistoryId) { selectedOTLStaff = emp; renderLoanTable(); window.renderOTLOverview(); } };
         window.goToManageFromHistory = () => { if(currentHistoryId) { window.selectOTLStaff(currentHistoryId); document.getElementById('otl-history-modal').classList.add('hidden'); } };
         window.filterOTLStaff = () => { const q = document.getElementById('otl-search').value.toLowerCase(); const list = document.getElementById('otl-staff-list'); list.innerHTML = employees.filter(e => e.name.toLowerCase().includes(q)).map(emp => `<div onclick="window.selectOTLStaff('${emp.id}')" class="p-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 text-xs flex justify-between items-center ${selectedOTLStaff?.id === emp.id ? 'bg-blue-100' : ''}"><span class="font-bold text-gray-700">${emp.name}</span><span class="text-gray-400 text-[10px]">${emp.department}</span></div>`).join(''); };
@@ -1727,7 +1804,19 @@
 
         // 3. UI Updater Field (Ensures UI values refresh properly after auto-computation)
         window.updatePayrollField = async (f, v) => {
-            if(f === 'notes') { currentPayrollState[f] = v; } else { currentPayrollState[f] = parseFloat(String(v).replace(/,/g, '')) || 0; }
+            let nextValue = f === 'notes' ? v : (parseFloat(String(v).replace(/,/g, '')) || 0);
+            if (f === 'visa' && selectedEmployee && selectedEmployee.department === 'English') {
+                const requestedVisa = Math.max(0, parseFloat(nextValue) || 0);
+                const visaTotal = Math.max(0, parseFloat(selectedEmployee.visaTotalCost || 0) || 0);
+                const currentKey = `${editorYear}-${editorMonth}`;
+                const paidBefore = getEnglishVisaTotalPayment(selectedEmployee, null, currentKey);
+                const remainingVisa = Math.max(0, visaTotal - paidBefore);
+                if (visaTotal > 0 && requestedVisa > remainingVisa) {
+                    alert(`Visa payment is more than the remaining ${formatUSD(remainingVisa)}. Only the remaining amount will be recorded.`);
+                    nextValue = remainingVisa;
+                }
+            }
+            currentPayrollState[f] = nextValue;
             window.recalculatePayrollState(selectedEmployee.department, currentPayrollState);
             const updateUIField = (fieldName) => { const input = document.querySelector(`input[data-field="${fieldName}"]`); if(input) { const val = currentPayrollState[fieldName]; input.value = (val && parseFloat(val) !== 0) ? parseFloat(val).toLocaleString('en-US') : ''; } };
             if (selectedEmployee.department.includes('Accounts')) { updateUIField('ເງີນເດືອນພື້ນຖານ'); } else if (selectedEmployee.department.includes('Invitational Teachers')) { updateUIField('ເງີນເດືອນ'); } else if (selectedEmployee.department !== 'English' && !GS_DEPTS.includes(selectedEmployee.department)) { 
@@ -3697,7 +3786,40 @@ function getArounyEnglishPayrollState(emp, key, state) {
     // Status changes should immediately unlock/lock the payroll editor for the selected staff member.
     const originalSaveEmployee = window.saveEmployee;
     window.saveEmployee = async function () {
+        const movementEmployeeId = selectedEmployee?.id;
+        const movementFromDepartment = selectedEmployee?.department || '';
+        const movementForm = arguments[0]?.target;
+        const movementToDepartment = movementForm ? String(new FormData(movementForm).get('department') || '') : '';
+
         await originalSaveEmployee.apply(this, arguments);
+
+        if (movementEmployeeId && movementFromDepartment && movementToDepartment && movementFromDepartment !== movementToDepartment) {
+            const savedEmployee = employees.find(e => String(e.id) === String(movementEmployeeId));
+            if (savedEmployee) {
+                const movementHistory = Array.isArray(savedEmployee.movementHistory) ? savedEmployee.movementHistory.slice() : [];
+                const lastMovement = movementHistory[movementHistory.length - 1];
+                const alreadyRecorded = lastMovement &&
+                    String(lastMovement.from || '') === movementFromDepartment &&
+                    String(lastMovement.to || '') === movementToDepartment &&
+                    lastMovement.date &&
+                    Date.now() - new Date(lastMovement.date).getTime() < 5000;
+                if (!alreadyRecorded) {
+                    movementHistory.push({
+                        from: movementFromDepartment,
+                        to: movementToDepartment,
+                        date: new Date().toISOString()
+                    });
+                    savedEmployee.movementHistory = movementHistory;
+                    await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(savedEmployee));
+                    employees = await transact(STORE_EMPLOYEES, 'readonly', s => s.getAll());
+                    if (selectedEmployee && String(selectedEmployee.id) === String(movementEmployeeId)) {
+                        selectedEmployee = employees.find(e => String(e.id) === String(movementEmployeeId)) || selectedEmployee;
+                    }
+                    if (typeof window.renderEmployeeList === 'function') window.renderEmployeeList();
+                }
+            }
+        }
+
         if (selectedEmployee) {
             selectedEmployee = employees.find(e => String(e.id) === String(selectedEmployee.id)) || selectedEmployee;
             if (selectedEmployee) {
@@ -4361,14 +4483,14 @@ function getArounyEnglishPayrollState(emp, key, state) {
             const desc = String(loan.description || '').trim();
             if (desc && !byDesc.has(desc)) byDesc.set(desc, loan);
         });
-        Object.values(payroll).forEach(state => {
+        Object.entries(payroll).forEach(([periodKey, state]) => {
             let allocated = false;
             if (Array.isArray(state.loanPayments) && state.loanPayments.length) {
                 state.loanPayments.forEach(item => {
                     const amount = Math.max(parseFloat(item?.amount || 0) || 0, 0);
                     if (!amount) return;
                     const loan = (item.loanId && byId.get(String(item.loanId))) || (item.description && byDesc.get(String(item.description).trim()));
-                    if (!loan) return;
+                    if (!loan || !loanPaymentIsAfterLoanDate(periodKey, loan)) return;
                     allocated = true;
                     loan.paid = (loan.paid || 0) + amount;
                     loan.paymentCount = (loan.paymentCount || 0) + 1;
@@ -4378,6 +4500,7 @@ function getArounyEnglishPayrollState(emp, key, state) {
                 const amount = getHistoryPaymentAmount(state);
                 if (amount > 0 && allLoans.length) {
                     const loan = allLoans.find(l => String(state.loanDesc || '').trim() && String(l.description || '').trim() === String(state.loanDesc || '').trim()) || allLoans[0];
+                    if (!loan || !loanPaymentIsAfterLoanDate(periodKey, loan)) return;
                     loan.paid = (loan.paid || 0) + amount;
                     loan.paymentCount = (loan.paymentCount || 0) + 1;
                 }
@@ -4409,7 +4532,7 @@ function getArounyEnglishPayrollState(emp, key, state) {
             const amount = getHistoryPaymentAllocation(state, loan, loanIndex === 0);
             if (amount > 0) {
                 const applied = Math.min(amount, Math.max(total - paidSoFar, 0) || amount);
-                rows.push({ key, amount: applied, skipped: false });
+                rows.push({ key, amount: applied, skipped: false, loanId: loan?.id ? String(loan.id) : '' });
                 paidSoFar += applied;
             } else if (total > 0 && paidSoFar < total) {
                 rows.push({ key, amount: 0, skipped: true });
@@ -4436,7 +4559,7 @@ function getArounyEnglishPayrollState(emp, key, state) {
             const loanTotal = rows.reduce((sum, row) => sum + row.amount, 0);
             totalLoanPayments += loanTotal;
             paymentRows += `<tr class="bg-green-100 border-t border-green-200"><td colspan="3" class="px-3 py-2 font-bold text-green-900 text-xs">${escapePayslipHTML(loan.description || 'Loan')} — ${escapePayslipHTML(loan.dateAdded || '-')} — Total Paid: ${formatMoney(loanTotal)}</td></tr>`;
-            paymentRows += rows.length ? rows.map(row => `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 pl-6 font-medium text-gray-700 text-xs">${row.key}</td><td class="px-3 py-2 text-right font-mono font-bold ${row.skipped ? 'text-red-600' : 'text-green-700'} text-xs">${row.skipped ? 'SKIPPED' : formatMoney(row.amount)}</td><td class="px-3 py-2 text-center flex justify-center gap-1">${row.skipped ? '' : `<button onclick="window.editHistoryPayment('${row.key}', ${row.amount})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit Payment"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="window.deleteHistoryPayment('${row.key}', ${row.amount})" class="text-red-400 hover:text-red-600 p-1" title="Delete Payment"><i data-lucide="trash-2" class="w-3 h-3"></i></button>`}</td></tr>`).join('') : '<tr class="border-b border-gray-50"><td colspan="3" class="px-3 py-2 pl-6 text-xs text-gray-400">No payment records for this loan.</td></tr>';
+            paymentRows += rows.length ? rows.map(row => `<tr class="border-b border-gray-50 last:border-0"><td class="px-3 py-2 pl-6 font-medium text-gray-700 text-xs">${row.key}</td><td class="px-3 py-2 text-right font-mono font-bold ${row.skipped ? 'text-red-600' : 'text-green-700'} text-xs">${row.skipped ? 'SKIPPED' : formatMoney(row.amount)}</td><td class="px-3 py-2 text-center flex justify-center gap-1">${row.skipped ? '' : `<button onclick="window.editHistoryPayment(${JSON.stringify(row.key)}, ${row.amount}, ${JSON.stringify(row.loanId || '')})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit Payment"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="window.deleteHistoryPayment(${JSON.stringify(row.key)}, ${row.amount}, ${JSON.stringify(row.loanId || '')})" class="text-red-400 hover:text-red-600 p-1" title="Delete Payment"><i data-lucide="trash-2" class="w-3 h-3"></i></button>`}</td></tr>`).join('') : '<tr class="border-b border-gray-50"><td colspan="3" class="px-3 py-2 pl-6 text-xs text-gray-400">No payment records for this loan.</td></tr>';
         });
         if (!loans.length) paymentRows = '<tr><td colspan="3" class="p-3 text-center text-gray-400 text-xs">No loan records found.</td></tr>';
         if (totalLoanPayments > 0) paymentRows += `<tr class="border-t border-gray-200 bg-green-50"><td class="px-3 py-2 font-bold text-gray-800 text-xs text-right">TOTAL PAID</td><td class="px-3 py-2 text-right font-mono font-bold text-green-800 text-xs">${formatMoney(totalLoanPayments)}</td><td class="px-3 py-2"></td></tr>`;
@@ -4457,16 +4580,29 @@ function getArounyEnglishPayrollState(emp, key, state) {
         document.getElementById('otl-history-modal').classList.remove('hidden');
         if (window.lucide) lucide.createIcons();
     };
-    window.deleteHistoryPayment = async function (key, oldVal) {
+    window.deleteHistoryPayment = async function (key, oldVal, loanId = '') {
         const emp = employees.find(e => e.id === currentHistoryId);
         if (!emp || !emp.payrollHistory?.[key]) return;
         if (!confirm(`Delete payment record for ${key} of amount ${formatMoney(oldVal)}?`)) return;
         const state = emp.payrollHistory[key];
-        state.loanDeduction = 0;
-        state.loanPayments = [];
-        state.loanDesc = '';
+        let removed = 0;
+        if (Array.isArray(state.loanPayments) && state.loanPayments.length && loanId) {
+            const kept = [];
+            state.loanPayments.forEach(item => {
+                if (item?.loanId && String(item.loanId) === String(loanId)) removed += parseFloat(item.amount || 0) || 0;
+                else kept.push(item);
+            });
+            state.loanPayments = kept;
+            state.loanDeduction = state.loanPayments.reduce((sum, item) => sum + (parseFloat(item?.amount || 0) || 0), 0);
+            state.loanDesc = state.loanPayments.map(item => item?.description).filter(Boolean).join(', ');
+        } else {
+            removed = parseFloat(oldVal) || 0;
+            state.loanDeduction = 0;
+            state.loanPayments = [];
+            state.loanDesc = '';
+        }
         if (!Array.isArray(emp.loanPaymentDeletionLogs)) emp.loanPaymentDeletionLogs = [];
-        emp.loanPaymentDeletionLogs.push({ key, amount: parseFloat(oldVal) || 0, deletedAt: new Date().toISOString() });
+        emp.loanPaymentDeletionLogs.push({ key, amount: removed || parseFloat(oldVal) || 0, loanId: loanId ? String(loanId) : '', deletedAt: new Date().toISOString() });
         recomputeLoanCollectionsAfterPaymentChange(emp);
         emp.lastModified = new Date().toISOString();
         await transact(STORE_EMPLOYEES, 'readwrite', s => s.put(emp));
@@ -4655,6 +4791,24 @@ function getArounyEnglishPayrollState(emp, key, state) {
         renderLoanTable();
         window.renderOTLOverview();
     };
+    // English Visa payment guard: cap overpayments at the remaining balance and keep the live editor/payslip in sync.
+    const originalUpdatePayrollFieldForVisaGuard = window.updatePayrollField;
+    window.updatePayrollField = async function (field, value) {
+        if (field === 'visa' && selectedEmployee?.department === 'English') {
+            const requestedState = JSON.parse(JSON.stringify(currentPayrollState || {}));
+            requestedState.visa = parseFloat(String(value).replace(/,/g, '')) || 0;
+            const visaCheck = capEnglishVisaPayment(selectedEmployee, requestedState, `${editorYear}-${editorMonth}`);
+            if (visaCheck.capped) {
+                alert(`Visa payment is more than the remaining amount. Only ${formatUSD(visaCheck.applied)} will be used.`);
+                await originalUpdatePayrollFieldForVisaGuard.call(this, field, visaCheck.applied);
+                const visaInput = document.querySelector('input[data-field="visa"]');
+                if (visaInput) visaInput.value = visaCheck.applied ? visaCheck.applied.toLocaleString('en-US') : '';
+                return;
+            }
+        }
+        return originalUpdatePayrollFieldForVisaGuard.apply(this, arguments);
+    };
+
 })();
 
 })();
